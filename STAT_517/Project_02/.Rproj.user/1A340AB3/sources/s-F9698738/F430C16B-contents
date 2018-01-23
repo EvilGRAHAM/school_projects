@@ -1,0 +1,21 @@
+rsquare <- c()
+for(i in 1:1000){
+  banana_cor <- 
+    banana_data %>%
+    sample_n(10) %>% 
+    select(
+      -c(
+        ID
+        ,Weight
+        ,Radius
+        ,Length
+        ,Circumference
+      )
+    ) %>% 
+    cor()
+  
+  xy_vec <- banana_cor[2:4, 1]
+  C_mat <- banana_cor[2:4, 2:4]
+  
+  rsquare[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
+}

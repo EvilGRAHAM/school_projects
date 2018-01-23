@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1516733041700.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "2CDBB477",
+    "lastKnownWriteTime" : 1516733127,
+    "last_content_update" : 1516733127869,
+    "path" : "C:/Users/scott/OneDrive/Documents/Programs/R Programs/Adaptive LASSO.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "40,0",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

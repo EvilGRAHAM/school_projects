@@ -1,0 +1,303 @@
+---
+title: "Does Size Matter?"
+author: "Scott Graham, Kaisa Roggeveen"
+date: "February 13, 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+  - \newcommand{\Logit}{{\operatorname{Logit}}}
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
+library(glmnet, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+library(stargazer, warn.conflicts = FALSE, quietly = TRUE)
+
+set.seed(5609)
+
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+        ,fill = NA
+      )
+    )
+
+cv.adaptive.glmnet <- 
+  function(
+    x
+    ,y
+    ,alpha = 1
+    ,gamma = 1
+    ,weights
+    ,nfolds = 10
+    ,parallel = FALSE
+    ,...
+  ){
+    cv.alasso.ridge <- 
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,alpha = 0
+        ,nfolds = nfolds
+        ,parallel = parallel
+      )
+    
+    cv.alasso.weights <- 1 / abs(coef(object = cv.alasso.ridge, s = "lambda.min", exact = TRUE)[-1, 1])^(gamma)
+    
+    cv.alasso.model <-   
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,alpha = alpha
+        ,penalty.factor = cv.alasso.weights
+      )
+    cv.alasso.model
+  }
+
+banana_data <-
+  "mybanana.txt" %>% 
+  read_tsv()
+```
+
+```{r Prelim}
+banana_data %>%
+  select(-ID) %>% 
+  cor() %>% 
+  as.data.frame() %>%  
+  rownames_to_column() %>% 
+  as.tibble() %>% 
+  gather(
+    key = Column
+    ,value = Correlation
+    ,-rowname
+  ) %>% 
+  rename(Row = rowname) %>% 
+  ggplot(
+    aes(
+      x = Column
+      ,y = Row
+      ,fill = Correlation
+    )
+  ) +
+  geom_raster() +
+  scale_fill_distiller(
+    type = "div"
+    ,palette = "RdBu"
+    ,limits = c(-1, 1)
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+    ,axis.title.x = element_blank()
+    ,axis.title.y = element_blank()
+  )
+
+banana_tidy <- 
+  banana_data %>% 
+  gather(
+    key = "Type"
+    ,value = "Measurement"
+    ,-ID
+  )
+
+banana_tidy %>% 
+  ggplot(aes(x = Measurement, colour = Type)) +
+  geom_histogram(
+    aes(y = ..density..)
+    ,alpha = 0
+    ,binwidth = function(x) nclass.FD(x)
+  ) +
+  geom_density() +
+  facet_wrap(
+    ~ Type
+    ,scales = "free"
+  ) +
+  scale_colour_brewer(
+    palette = "Dark2"
+    ,type = "qual"
+  )
+
+banana_data %>% 
+  gather(
+    key = "Type"
+    ,value = "Measurement"
+    ,-ID
+    ,-Weight
+  ) %>% 
+  ggplot(
+    aes(
+      x = Measurement
+      ,y = Weight
+      ,colour = Type
+    )
+  ) +
+  geom_smooth(
+    method = "loess"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  geom_point() +
+  facet_wrap(
+    ~ Type
+    ,scales = "free_x"
+  ) +
+  scale_colour_brewer(
+    palette = "Set2"
+    ,type = "qual"
+  )
+```
+
+```{r Models}
+banana_data <- 
+  banana_data %>% 
+  mutate_at(
+    .vars = vars(Weight:Circumference)
+    ,.funs = funs(log = log)
+  )
+
+banana_reg_01 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log + Radius_log + Circumference_log
+    ,data = .
+  )
+
+banana_reg_02 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Radius_log + Length_log
+    ,data = .
+  )
+
+banana_reg_03 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Radius_log
+    ,data = .
+  )
+
+banana_reg_04 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log
+    ,data = .
+  )
+summary(banana_reg_01)
+summary(banana_reg_02)
+summary(banana_reg_03)
+summary(banana_reg_04)
+
+kable(anova(banana_reg_02, banana_reg_01))
+kable(anova(banana_reg_03, banana_reg_01))
+kable(anova(banana_reg_03, banana_reg_02))
+
+# banana_data %>% 
+#   cv.lm(
+#     Weight_log ~ Length_log + Radius_log
+#   )
+
+banana_ind <- 
+  banana_data %>% 
+  select(
+    Length
+    ,Radius
+    ,Circumference
+    ,Length_log
+    ,Radius_log
+    ,Circumference_log
+  ) %>% 
+  as.matrix()
+
+banana_dep <- 
+  banana_data %>% 
+  select(
+    Weight
+    ,Weight_log
+  ) %>% 
+  as.matrix()
+
+banana_lasso_cvfit_01 <-
+  cv.adaptive.glmnet(
+    x = banana_ind
+    ,y = banana_dep[, "Weight_log"]
+    ,alpha = 1
+  )
+
+autoplot(banana_lasso_cvfit_01)
+banana_lasso_cvfit_01 %>% 
+  coef(s = "lambda.min") %>% 
+  as.matrix() %>% 
+  kable()
+banana_lasso_cvfit_01 %>% 
+  coef(s = "lambda.1se") %>% 
+  as.matrix() %>% 
+  kable()
+
+banana_lasso_cvfit_02 <-
+  cv.adaptive.glmnet(
+    x = banana_ind
+    ,y = banana_dep[, "Weight"]
+    ,alpha = 1
+  )
+
+autoplot(banana_lasso_cvfit_02)
+banana_lasso_cvfit_02 %>% 
+  coef(s = "lambda.min") %>% 
+  as.matrix() %>% 
+  kable()
+banana_lasso_cvfit_02 %>% 
+  coef(s = "lambda.1se") %>% 
+  as.matrix() %>% 
+  kable()
+```
+
+```{r Sample Size, cache=TRUE}
+rsquare <- c()
+for(i in 1:1000){
+  banana_cor <- 
+    banana_data %>%
+    sample_n(10) %>% 
+    select(
+      -c(
+        ID
+        ,Weight
+        ,Radius
+        ,Length
+        ,Circumference
+      )
+    ) %>% 
+    cor()
+  
+  xy_vec <- banana_cor[2:4, 1]
+  C_mat <- banana_cor[2:4, 2:4]
+  
+  rsquare[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
+}
+rsquare %>% 
+  summary()
+```

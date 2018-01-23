@@ -1,0 +1,171 @@
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(glmnet, warn.conflicts = FALSE, quietly = TRUE)
+
+cv.adaptive.glmnet.logit <- 
+  function(
+    x
+    ,y
+    ,family
+    ,alpha = 1
+    ,gamma = 1
+    ,weights
+    ,nfolds = 10
+    ,parallel = FALSE
+    ,...
+  ){
+    cv.alasso.ridge <- 
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,family = family
+        ,alpha = 0
+        ,nfolds = nfolds
+        ,parallel = parallel
+      )
+    
+    cv.alasso.weights <- 1 / abs(coef(object = cv.alasso.ridge, s = "lambda.min", exact = TRUE)[-1, 1])^(gamma)
+    
+    cv.alasso.model <-   
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,family = family
+        ,alpha = alpha
+        ,penalty.factor = cv.alasso.weights
+      )
+    cv.alasso.model
+  }
+
+cv.adaptive.glmnet <- 
+  function(
+    x
+    ,y
+    ,alpha = 1
+    ,gamma = 1
+    ,weights
+    ,nfolds = 10
+    ,parallel = FALSE
+    ,...
+  ){
+    cv.alasso.ridge <- 
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,alpha = 0
+        ,nfolds = nfolds
+        ,parallel = parallel
+      )
+    
+    cv.alasso.weights <- 1 / abs(coef(object = cv.alasso.ridge, s = "lambda.min", exact = TRUE)[-1, 1])^(gamma)
+    
+    cv.alasso.model <-   
+      cv.glmnet(
+        x = x
+        ,y = y
+        ,alpha = alpha
+        ,penalty.factor = cv.alasso.weights
+      )
+    cv.alasso.model
+  }
+
+
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+  )
+
+hockey_data <- 
+  "http://grahamst.at/projects/STAT_541/Final_Project/data/hockey_stats.csv" %>% 
+  read_csv() %>% 
+  rename(`Day of the Week` = `Day of Week`) %>% 
+  mutate(
+    `P1 Win` = as.factor(`P1 Win`)
+    ,`P2 - P1 Goals` = P2 - P1
+    ,`Shot Differential` = `P2 Shots` - `P1 Shots`
+    ,`Hit Differential` = `P2 Hits` - `P1 Hits`
+    ,`Day of the Week` = as.factor(`Day of the Week`)
+    ,`Scored 1st Boolean (P2)` = if_else(`Scored 1st` == "P2", 1, 0)
+    ,Shots = `P1 Shots` + `P2 Shots`
+    ,Hits = `P1 Hits` + `P2 Hits`
+    ,ToA = `P1 ToA` + `P2 ToA`
+    ,Passing = `P1 Passing` + `P2 Passing`
+    ,PM = `P1 PM` + `P2 PM`
+    ,Powerplays = `P1 Powerplays` + `P2 Powerplays`
+    ,`Penalty Shots` = `P1 Penalty Shots` + `P2 Penalty Shots`
+    ,Faceoffs = `P1 Faceoffs` + `P2 Faceoffs`
+    ,`Offensive Faceoffs` = `P1 Offensive Faceoffs` + `P2 Offensive Faceoffs`
+    ,Breakaways = `P1 Breakaways` + `P2 Breakaways`
+  )
+
+# day_of_week_conv <- 
+#   c(
+#     "0" = "Sunday"
+#     ,"1" = "Monday"
+#     ,"2" = "Tuesday"
+#     ,"3" = "Wednesday"
+#     ,"4" = "Thursday"
+#     ,"5" = "Friday"
+#     ,"6" = "Saturday"
+#   )
+
+ind_var <- 
+  c(
+    "Scored 1st Boolean (P2)"
+    ,"P1 Shots"
+    ,"P2 Shots"
+    ,"P1 Hits"
+    ,"P2 Hits"
+    ,"P1 ToA"
+    ,"P2 ToA"
+    ,"P1 Passing"
+    ,"P2 Passing"
+    ,"P1 PM"
+    ,"P2 PM"
+    ,"P1 Powerplays"
+    ,"P2 Powerplays"
+    ,"P1 Faceoffs"
+    ,"P2 Faceoffs"
+    ,"P1 Breakaways"
+    ,"P2 Breakaways"
+    ,"P1 Penalty Shots"
+    ,"P2 Penalty Shots"
+    ,"P1 Offensive Faceoffs"
+    ,"P2 Offensive Faceoffs"
+  )
+ind_var
+
+dep_var <- "P1 Win"
+
+hockey_lasso_ind <- 
+  hockey_data %>% 
+  select(ind_var) %>% 
+  as.matrix()
+
+hockey_lasso_dep <-
+  hockey_data %>% 
+  select(dep_var) %>% 
+  as.matrix()
+
+set.seed(5609)
+alasso_test <- 
+  cv.adaptive.glmnet(
+    x = hockey_lasso_ind
+    ,y = hockey_lasso_dep
+    ,family = "binomial"
+  )
+
+autoplot(alasso_test)
+coef(object = alasso_test, s = "lambda.min")
+coef(object = alasso_test, s = "lambda.1se")
