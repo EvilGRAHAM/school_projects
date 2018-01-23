@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1516745205458.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2263231532",
+    "id" : "76A0028",
+    "lastKnownWriteTime" : 1516745808,
+    "last_content_update" : 1516745808965,
+    "path" : "C:/Users/scott/OneDrive/Documents/GitHub/school_projects/STAT_517/Project 03/Shiny/ui.R",
+    "project_path" : "ui.R",
+    "properties" : {
+        "cursorPosition" : "96,20",
+        "scrollLine" : "68"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
