@@ -1,0 +1,254 @@
+---
+title: "Project 01"
+author: "Scott Graham, Kaisa Roggeveen"
+date: "January 25, 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+        ,fill = NA
+      )
+    )
+
+scoreci <- function(x,n,conflev){
+  zalpha <- abs(qnorm((1-conflev)/2))
+  phat <- x/n
+  bound <- (zalpha*((phat*(1-phat)+(zalpha**2)/(4*n))/n)**(1/2))/
+    (1+(zalpha**2)/n)
+  midpnt <- (phat+(zalpha**2)/(2*n))/(1+(zalpha**2)/n)
+  
+  uplim <- round(midpnt + bound,digits=4)
+  lowlim <- round(midpnt - bound,digits=4)
+  
+  results <- data.frame(lowlim,uplim)
+  results
+  # This function computes a confidence interval for a proportion.  
+  # It is based on inverting the large-sample normal score test for the
+  # proportion.  The input parameters are the number of successes, x, the
+  # total sample size, n, and the confidence level, conflev (e.g. 0.90).  
+  # Returned are the endpoints for the 100*conflev % confidence
+  # interval for the proportion.
+  
+  # binconf(x,n,conflev)
+}
+
+survey_data <-
+  "Project 01 Survey Data.txt" %>% 
+  read_tsv(col_names = FALSE) %>% 
+  select(-X13)
+
+colnames(survey_data) <- c("Patient Number", paste0("Q", 1:10), "Waiting Time")
+```
+
+# 1.
+One of the more obvious things to look for is any cases where the patient answers "No" or "Don't Remember" to Question 03, and then fills out questions 04-07, thereby ignoring the instructions.
+```{r Q01a}
+survey_data %>% 
+  filter(
+    Q3 != 1
+    ,Q4 != 0
+    |Q5 != 0
+    |Q6 != 0
+    |Q7 != 0
+  ) %>% 
+  kable()
+```
+
+Patient 52 is most likely a case of a data entry error, as their answer to Question 08 was erroneously entered as an 8 (Missing Answer), instead of a 0 (No answer expected). Patient 240 on the other hand either filled out Question 03 incorrectly, their response was entered incorrectly, or perhaps misread what the following questions asked. This may have resulted in them filling out information about a previous visit to the clinic where they did meet Dr. Sayah.
+
+By looking at the types of the columns of the data, Question 01 had something entered in as a non-numeric value, which is an issue.
+```{r Q01b}
+survey_data %>% 
+  filter(!(Q1 %in% as.character(0:9))) %>% 
+  kable()
+```
+
+Patient 300 had their response to Question 01 entered in as an "l" instead of a "1".
+
+```{r Q01c, include=FALSE}
+survey_data <- 
+  survey_data %>% 
+  mutate(
+    Q1 = if_else(Q1 == "l", as.character(1), Q1)
+    ,Q1 = as.integer(Q1)
+  )
+```
+
+Another issue arises for patients who indicate in Question 2 that they met a nurse immediately, but still listed a waiting time.
+```{r Q01d}
+survey_data %>% 
+  filter(
+    Q2 == 1
+    ,`Waiting Time` > 0
+  ) %>% 
+  kable()
+```
+
+Patient 252 is guilty of this, and either their wait time should be set to 0, or their response to Question 02 should be changed.
+
+For each question, responses can only be coded as $0, 1, \dots k, 8, 9$, where $k$ is the number of options given in the survey. As such, one should check to see if any patients gave responses outside of this scope.
+```{r Q01e}
+survey_data %>% 
+  filter(
+    !(Q1 %in% c(1:3, 8, 9))
+    |!(Q2 %in% c(1:4, 8, 9))
+    |!(Q3 %in% c(1:3, 8, 9))
+    |!(Q4 %in% c(0:6, 8, 9))
+    |!(Q5 %in% c(0:6, 8, 9))
+    |!(Q6 %in% c(0:6, 8, 9))
+    |!(Q7 %in% c(0:6, 8, 9))
+    |!(Q8 %in% c(1:6, 8, 9))
+    |!(Q9 %in% c(1:6, 8, 9))
+    |!(Q10 %in% c(1:5, 8, 9))
+  ) %>% 
+  kable()
+```
+
+
+# 2.
+```{r Q02a}
+survey_data %>% 
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 9)
+  ) %>% 
+  kable()
+```
+
+
+# 3.
+```{r Q03a}
+survey_data %>% 
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 8)
+  ) %>% 
+  kable()
+```
+
+
+# 4.
+```{r Q04a}
+survey_data %>% 
+  select(`Waiting Time`) %>% 
+  summary() %>% 
+  kable()
+
+survey_data %>% 
+  ggplot(aes(x = `Waiting Time`)) +
+  geom_density()
+```
+
+
+# 5.
+```{r Q05a}
+survey_data_q05 <- 
+  survey_data %>% 
+  filter(
+    Q4 %in% 0:6
+    ,Q10 < 8
+  ) %>% 
+  mutate(
+    Q4 = as.factor(Q4)
+    ,Q10 = factor(Q10, ordered = TRUE, levels = 5:1)
+    ,`Q10 Response` = as.factor(case_when(
+      Q10 == 1 ~ "Excellent"
+      ,Q10 == 2 ~ "Very Good"
+      ,Q10 == 3 ~ "Good"
+      ,Q10 == 4 ~ "Fair"
+      ,Q10 == 5 ~ "Poor"
+    ))
+  )
+survey_data_q05$`Q10 Response` <- 
+  factor(
+    x = survey_data_q05$`Q10 Response`
+    ,ordered = TRUE
+    ,levels = levels(survey_data_q05$`Q10 Response`)[c(4,2,3,5,1)]
+  )
+
+survey_data_q05 %>%
+  ggplot(
+    aes(
+      x = `Q10 Response`
+      ,colour = Q4
+      ,fill = Q4 
+    )
+  ) +
+  geom_bar() +
+  facet_wrap(
+    ~ Q4
+    ,scales = "free_y"
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+survey_data_q05 %>% 
+  group_by(Q4) %>% 
+  summarize(
+    `Average Rating` = mean(as.integer(Q10))
+    ,`SD of Rating` = sd(as.integer(Q10))
+  ) %>% 
+  kable(digits = 4) 
+
+survey_data_q05 %>% 
+  group_by(Q4, `Q10 Response`) %>% 
+  summarize(
+    `Number of Patients` = length(Q4)
+  ) %>% 
+  spread(
+    key = `Q10 Response`
+    ,value = `Number of Patients`
+  ) %>% 
+  mutate(
+    Positive = sum(Excellent, `Very Good`, Good/2)
+    ,Negative =  sum(Good/2, Fair, Poor)
+    ,`Number of Patients` = sum(Positive, Negative)
+  ) %>% 
+  mutate(
+    Score = scoreci(x = Positive, n = `Number of Patients`, conflev = 0.95)$lowlim
+  ) %>% 
+  kable(digits = 4)
+
+q05_cumlogit <-
+  polr(
+    `Q10 Response` ~ Q4
+    ,data = survey_data_q05
+  )
+
+summary(q05_cumlogit)
+```

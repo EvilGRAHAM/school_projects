@@ -1,0 +1,25 @@
+"0","survey_data_q05 %>%
+  ggplot(
+    aes(
+      x = `Q10 Response`
+      ,colour = Q4
+      ,fill = Q4 
+    )
+  ) +
+  geom_bar() +
+  facet_wrap(
+    ~ Q4
+    ,scales = ""free_y""
+  ) +
+  scale_colour_brewer(
+    type = ""qual""
+    ,palette = ""Set2""
+  ) +
+  scale_fill_brewer(
+    type = ""qual""
+    ,palette = ""Set2""
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+"
+"2","Error in FUN(X[[i]], ...) : object 'Q10 Response' not found
+"

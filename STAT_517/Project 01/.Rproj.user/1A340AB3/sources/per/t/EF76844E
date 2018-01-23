@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1516294167420.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1211559668",
+    "id" : "EF76844E",
+    "lastKnownWriteTime" : 1516306684,
+    "last_content_update" : 1516306684480,
+    "path" : "C:/Users/scott/OneDrive/Documents/University of Calgary/STAT/STAT 517/Projects/Project 01/Project_01.Rmd",
+    "project_path" : "Project_01.Rmd",
+    "properties" : {
+        "cursorPosition" : "219,0",
+        "last_setup_crc32" : "AB53004Aad2a45cd",
+        "scrollLine" : "192",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

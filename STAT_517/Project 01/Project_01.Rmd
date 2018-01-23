@@ -1,0 +1,400 @@
+---
+title: "Project 01"
+author: "Scott Graham, Kaisa Roggeveen"
+date: "January 25, 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+  - \newcommand{\Logit}{{\operatorname{Logit}}}
+
+output:
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(MASS, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+        ,fill = NA
+      )
+    )
+
+scoreci <- function(x,n,conflev){
+  zalpha <- abs(qnorm((1-conflev)/2))
+  phat <- x/n
+  bound <- (zalpha*((phat*(1-phat)+(zalpha**2)/(4*n))/n)**(1/2))/
+    (1+(zalpha**2)/n)
+  midpnt <- (phat+(zalpha**2)/(2*n))/(1+(zalpha**2)/n)
+  
+  uplim <- round(midpnt + bound,digits=4)
+  lowlim <- round(midpnt - bound,digits=4)
+  
+  results <- data.frame(lowlim,uplim)
+  results
+  # This function computes a confidence interval for a proportion.  
+  # It is based on inverting the large-sample normal score test for the
+  # proportion.  The input parameters are the number of successes, x, the
+  # total sample size, n, and the confidence level, conflev (e.g. 0.90).  
+  # Returned are the endpoints for the 100*conflev % confidence
+  # interval for the proportion.
+  
+  # binconf(x,n,conflev)
+}
+
+survey_data <-
+  "Project 01 Survey Data.txt" %>% 
+  read_tsv(col_names = FALSE) %>% 
+  select(-X13)
+
+colnames(survey_data) <- c("Patient Number", paste0("Q", 1:10), "Waiting Time")
+```
+
+# 1.
+One of the more obvious things to look for is any cases where the patient answers "No", "Don't Remember", "Missing Answer" or "Unexpected Answer" to Question 03, and then fills out Questions 04-07, thereby ignoring the instructions.
+```{r Q01a}
+survey_data %>% 
+  filter(
+    Q3 != 1
+    ,Q4 != 0
+    |Q5 != 0
+    |Q6 != 0
+    |Q7 != 0
+  ) %>% 
+  kable(caption = "Patients with Errors in Questions 04-07")
+```
+
+Patient 52 is most likely a case of a data entry error, as their answer to Question 08 was erroneously entered as an 8 (Missing Answer), instead of a 0 (No answer expected). Patient 240 on the other hand either filled out Question 03 incorrectly, their response was entered incorrectly, or perhaps misread what the following questions asked. This may have resulted in them filling out information about a previous visit to the clinic where they did meet Dr. Sayah.
+
+By looking at the types of the columns of the data, Question 01 had something entered in as a non-numeric value, which is an issue.
+```{r Q01b}
+survey_data %>% 
+  filter(!(Q1 %in% as.character(0:9))) %>% 
+  kable(caption = "Patients with Errors in Question 01")
+```
+
+Patient 300 had their response to Question 01 entered in as an "l" instead of a "1".
+
+```{r Q01c, include=FALSE}
+survey_data <- 
+  survey_data %>% 
+  mutate(
+    Q1 = if_else(Q1 == "l", as.character(1), Q1)
+    ,Q1 = as.integer(Q1)
+  )
+```
+
+Another issue arises for patients who indicate in Question 2 that they met a nurse immediately, but still listed a waiting time.
+```{r Q01d}
+survey_data %>% 
+  filter(
+    Q2 == 1
+    ,`Waiting Time` > 0
+  ) %>% 
+  kable(caption = "Patients Who Indicated They Didn't Wait, but Listed a Waiting Time")
+```
+
+Patient 252 is guilty of this, and either their wait time should be set to 0, or their response to Question 02 should be changed.
+
+For each question, responses can only be coded as $0, 1, \dots k, 8, 9$, where $k$ is the number of options given in the survey. As such, one should check to see if any patients gave responses outside of this scope.
+```{r Q01e}
+survey_data %>% 
+  filter(
+    !(Q1 %in% c(1:3, 8, 9))
+    |!(Q2 %in% c(1:4, 8, 9))
+    |!(Q3 %in% c(1:3, 8, 9))
+    |!(Q4 %in% c(0:6, 8, 9))
+    |!(Q5 %in% c(0:6, 8, 9))
+    |!(Q6 %in% c(0:6, 8, 9))
+    |!(Q7 %in% c(0:6, 8, 9))
+    |!(Q8 %in% c(1:6, 8, 9))
+    |!(Q9 %in% c(1:6, 8, 9))
+    |!(Q10 %in% c(1:5, 8, 9))
+  ) %>% 
+  kable(caption = "Patients Who Answered with a Response Outside the Scope of the Question")
+```
+
+
+# 2.
+```{r Q02a}
+survey_data %>% 
+  select(-`Waiting Time`) %>%
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 9)
+  ) %>% 
+  kable(caption = "Patients with an Unexpected Answer")
+survey_data %>% 
+  select(-`Waiting Time`) %>%
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 9)
+  ) %>% 
+  mutate_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 9)
+  ) %>% 
+  mutate(`Patient Number` = 1) %>% 
+  summarize_all(sum) %>% 
+  rename(`Total Patients` = `Patient Number`) %>% 
+  kable(caption = "Total Patients with an Unexpected Answer")
+```
+
+
+# 3.
+```{r Q03a}
+survey_data %>% 
+  select(-`Waiting Time`) %>% 
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 8)
+  ) %>% 
+  kable(caption = "Patients with a Missing Answer")
+survey_data %>% 
+  select(-`Waiting Time`) %>%
+  filter_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 8)
+  ) %>% 
+  mutate_at(
+    .vars = vars(starts_with("Q"))
+    ,any_vars(. == 8)
+  ) %>% 
+  mutate(`Patient Number` = 1) %>% 
+  summarize_all(sum) %>%
+  rename(`Total Patients` = `Patient Number`) %>% 
+  kable(caption = "Total Patients with a Missing Answer")
+```
+
+
+# 4.
+```{r Q04a}
+survey_data %>% 
+  select(`Waiting Time`) %>% 
+  summary() %>% 
+  kable(caption = "Summary Statistics for Waiting Time")
+
+survey_data %>% 
+  ggplot(aes(x = `Waiting Time`)) +
+  geom_density() +
+  labs(
+    title = "Figure 01: Kernel Density Estimator for Waiting Time"
+    ,x = "Waiting Time (min)"
+  )
+```
+
+
+# 5.
+For this, we considered the responses to Question 10, "Considering all aspects of your most recent visit, how would you rate the services you received?", as we felt it best represented the the patients feelings regarding the true reputation of the centre. First we looked at the distribution of responses, faceted by doctor, to see if any differences can be seen.
+
+```{r Q05a}
+survey_data_q05 <- 
+  survey_data %>% 
+  filter(
+    Q4 %in% 0:6
+    ,Q10 < 8
+  ) %>% 
+  mutate(
+    Q4 = as.factor(Q4)
+    ,`Dr.` = as.factor(case_when(
+      Q4 == 0 ~ "N/A"
+      ,Q4 == 1 ~ "Alberts"
+      ,Q4 == 2 ~ "Casey"
+      ,Q4 == 3 ~ "Jones"
+      ,Q4 == 4 ~ "Sayah"
+      ,Q4 == 5 ~ "Wesson"
+      ,Q4 == 6 ~ "Don't Remember"
+    ))
+    ,Q10 = factor(Q10, ordered = TRUE, levels = 5:1)
+    ,`Q10 Response` = as.factor(case_when(
+      Q10 == 1 ~ "Excellent"
+      ,Q10 == 2 ~ "Very Good"
+      ,Q10 == 3 ~ "Good"
+      ,Q10 == 4 ~ "Fair"
+      ,Q10 == 5 ~ "Poor"
+    ))
+  )
+survey_data_q05$`Dr.` <- 
+  factor(
+    x = survey_data_q05$`Dr.`
+    ,ordered = FALSE
+    ,levels = levels(survey_data_q05$`Dr.`)[c(5, 3, 1, 2, 4, 6, 7)]
+  )
+survey_data_q05$`Q10 Response` <- 
+  factor(
+    x = survey_data_q05$`Q10 Response`
+    ,ordered = TRUE
+    ,levels = levels(survey_data_q05$`Q10 Response`)[c(4, 2, 3, 5, 1)]
+  )
+```
+
+The N/A responses represents the patients who don't remember which doctor they saw, or didn't see one (answered something other than Yes to Question 03). For those who remembered which doctor they saw, they tend to exhibit negative skewness in their responses, with the majority of which being in the Good to Excellent range of responses.
+
+```{r Q05b}
+survey_data_q05 %>%
+  ggplot(
+    aes(
+      x = `Q10 Response`
+      ,colour = `Dr.`
+      ,fill = `Dr.`
+    )
+  ) +
+  geom_bar() +
+  facet_wrap(
+    ~ `Dr.`
+    ,scales = "free_y"
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Figure 02: Considering all aspects of your most recent visit, \nhow would you rate the services you received?"
+    ,x = "Rating for Each Doctor"
+  )
+
+
+survey_data_q05 %>% 
+  group_by(`Dr.`) %>% 
+  summarize(
+    `Average Rating` = mean(as.integer(Q10))
+    ,`SD of Rating` = sd(as.integer(Q10))
+  ) %>% 
+  kable(digits = 4, caption = "Average and Standard Deviation of Rating (Higher is Better)") 
+```
+
+Next we broke down the responses by doctor, and calculated the average rating, with a 5 being Excellent, and 1 being Poor. as well we found the standard deviation of the ratings. From this we found that patients who saw Dr. Wesson gave the highest average rating to the centre, and those who saw Dr. Sayah gave the worst, ignoring the N/A response and Don't Remember.
+
+```{r Q05c}
+survey_data_q05_scores <- 
+  survey_data_q05 %>% 
+  group_by(`Dr.`, `Q10 Response`) %>% 
+  summarize(
+    `Number of Patients` = length(`Dr.`)
+  ) %>% 
+  spread(
+    key = `Q10 Response`
+    ,value = `Number of Patients`
+  ) %>% 
+  mutate(
+    Positive = sum(Excellent, `Very Good`, Good/2)
+    ,Negative =  sum(Good/2, Fair, Poor)
+    ,`Number of Patients` = sum(Positive, Negative)
+  ) %>% 
+  mutate(
+    Score = scoreci(x = Positive, n = `Number of Patients`, conflev = 0.95)$lowlim
+  )
+survey_data_q05_scores %>% 
+  kable(digits = 4, caption = "Lower Bound of Wilson Score Confidence Interval")
+```
+
+As well, we considered the number of positive responses a patient left, based on which doctor they saw, and the number of negative responses. A response was considered positive if it was Very Good or Excellent, and was considered negative if it was fair or poor. If the response was Good, half a point was assigned to each category. From this we calculated the Wilson Score Confidence Interval, which is given by: 
+$$
+  \frac{\phat + \frac{{z_{\frac{\alpha}{2}}}^{2}}{2n} - z_{\frac{\alpha}{2}}\sqrt{ \frac{\phat(1-\phat)+\frac{{z_{\frac{\alpha}{2}}}^{2}}{4n}}{n}}}{1+\frac{{z_{\frac{\alpha}{2}}}^{2}}{n}}
+$$
+
+This interval is a $(1-\alpha)\%$ confidence interval for $p$, with a center point being the weighted average of $1/2$ and $\phat$. Greater weight is assigned to $\phat$ as the sample size increases. The lower bound is then examined, as it allows us to rank the doctors based on the proportion of positive responses received. From this Dr. Jones is considered the best, with a score of `r survey_data_q05_scores %>% ungroup() %>% filter(Dr. == "Jones") %>% select(Score) %>% as.numeric()`, and Dr. Wesson the worst with a score of `r survey_data_q05_scores %>% ungroup() %>% filter(Dr. == "Wesson") %>% select(Score) %>% as.numeric()`. However, both of them is a noticeable improvement over those who didn't see a doctor, or remember which doctor the may have saw. The difference between these results, and the ones presented previously is that the Wilson Score Interval places a much greater emphasis on sample size compared to merely looking at the averages, and since Dr. Jones saw the most patients (`r survey_data_q05_scores %>% ungroup() %>% filter(Dr. == "Jones") %>% select("Number of Patients") %>% as.numeric()`) and Dr. Wesson seeing the least (`r survey_data_q05_scores %>% ungroup() %>% filter(Dr. == "Wesson") %>% select("Number of Patients") %>% as.numeric()`), this may explain the difference in rankings.
+
+Finally a Proportional-Odds Cumulative Logit Model was fitted to the data, as a means of estimating the effect each doctor had on the reputation of the clinic. Let:
+$$
+  \pi_{i} =
+  \Prob\left( Y = i \right),
+  i = 1, 2, \dots, J
+$$
+$$
+  L_{j} =
+  \Logit\left[ \Prob\left( Y \leq j \right) \right] =
+  \ln\left[ \frac{\Prob\left( Y \leq j \right)}{1 - \Prob\left( Y \leq j \right)} \right] =
+  \ln\left[ \frac{\sum_{i=1}^{j}\pi_{i}}{\sum_{i=j+1}^{J}\pi_{i}} \right], j = 1, 2 , \dots, J-1
+$$
+
+In our case we have 5 possible responses, so $J=5$. We then fit $J-1$ logistic regression models of the type:
+$$
+  L_{j} =
+  \alpha_{j} - \left( \sum_{i=1}^{p}\beta_{i}X_{i} \right),
+  \forall j = 1,2,\dots, J-1
+$$
+
+Where:
+$$
+  L_{1} \leq
+  L_{2} \leq
+  \dots \leq
+  L_{J-1}
+$$
+
+This allows us to keep the $\beta_{i}$s constant across the models, and only vary $\alpha$, which is a monotonically increasing function of $j$. The higher the $\beta_{i}$ terms are, the increased probability (by a multiplicative factor) the response will be in a higher category (i.e. Excellent instead of Poor). 
+
+
+```{r Q05d}
+q05_cumlogit <-
+  polr(
+    `Q10 Response` ~ `Dr.`
+    ,data = survey_data_q05
+  )
+
+summary(q05_cumlogit)
+```
+
+This gives the model (with N/A being our base level):
+$$
+  L_{j} =
+  \alpha_{j} - \left( 0.5179DR + 0.4770A + 0.3030C + 0.4281J + 0.2667S + 0.8902W \right)
+$$
+$$
+  \alpha_{j} =
+  \begin{cases}
+  -2.0176, j = 1  \\
+  -0.9319, j = 2  \\
+  0.7703, j = 3   \\
+  2.3954, j = 4   
+  \end{cases}
+$$
+
+This model believes that Dr. Wesson provides the best rating, and Dr. Sayah the worst. However it is important to note that none of the $\beta_{i}$s are statistically significant at $\alpha=0.05$, which can be confirmed by running an ANOVA of this model against the one containing only the intercept.
+
+```{r Q05e}
+q05_cumlogit_int <-
+  polr(
+    `Q10 Response` ~ 1
+    ,data = survey_data_q05
+  )
+
+anova(q05_cumlogit, q05_cumlogit_int) %>% 
+  kable(digits = 4, caption = "ANOVA for Cumulative Logit Model")
+```
+
+This fails to reject the null hypothesis that the two models explain the same amount of variance based on the data, and as such the simpler model should be used. 
+
+From this two conclusions can be drawn based on the types of tests being run:
+
+1. Using the Wilson Score, there is a way to rank each of the doctors ability to provide a positive reputation for the centre
+
+2. Using a Cumulative Logistic Regression Model, none of the doctors provide a statistically significant effect towards determine the overall reputation of the centre.
+
+That being said, Dr. Sayah was consistently rated among the lowest of the 5 doctors, and is most likely providing a negative contribution the the centres reputation, and Dr. Wesson should take on more patients to better determine how much he improves the centres reputation. Dr. Jones consistently scored among the highest of the doctors, as well as taking the greatest number of patients. 
