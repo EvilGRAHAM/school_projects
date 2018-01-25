@@ -11,7 +11,7 @@ panss_old <- read_csv(file = "data/Panssdata_test.csv")
 #Server ----------
 shinyServer(
   function(input, output, clientData, session) {
-    
+
     panss_new <- reactive({
       panss_gen <- 
         tibble(
@@ -56,8 +56,9 @@ shinyServer(
     observeEvent(
       input$submit
       ,{
+        showModal(modalDialog(title = "Confirmation", "Are you sure you wish to submit?"))
         write_csv(x = panss_new(), path = "../Shiny/data/Panssdata_test.csv")
-        # panss_old <- read_csv(file = "data/Panssdata_test.csv")
+        # panss_old_1() <- read_csv(file = "data/Panssdata_test.csv")
       }
     )
 
