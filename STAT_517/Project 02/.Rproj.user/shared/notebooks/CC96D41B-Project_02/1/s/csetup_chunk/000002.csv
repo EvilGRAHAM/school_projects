@@ -1,0 +1,92 @@
+"0","knitr::opts_chunk$set(echo = FALSE)"
+"0","library(DAAG, warn.conflicts = FALSE, quietly = TRUE)"
+"0","library(glmnet, warn.conflicts = FALSE, quietly = TRUE)"
+"2","Loaded glmnet 2.0-13
+
+"
+"0","library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)"
+"2","[30m-- [1mAttaching packages[22m --------------------------------------- tidyverse 1.2.1 --[39m
+"
+"2","[30m[32mv[30m [34mggplot2[30m 2.2.1.[31m9000[30m     [32mv[30m [34mpurrr  [30m 0.2.4     
+[32mv[30m [34mtibble [30m 1.4.1          [32mv[30m [34mdplyr  [30m 0.7.4     
+[32mv[30m [34mtidyr  [30m 0.7.2          [32mv[30m [34mstringr[30m 1.2.0     
+[32mv[30m [34mreadr  [30m 1.1.1          [32mv[30m [34mforcats[30m 0.2.0     [39m
+"
+"2","[30m-- [1mConflicts[22m ------------------------------------------ tidyverse_conflicts() --
+[31mx[30m [34mpurrr[30m::[32maccumulate()[30m masks [34mforeach[30m::accumulate()
+[31mx[30m [34mtidyr[30m::[32mexpand()[30m     masks [34mMatrix[30m::expand()
+[31mx[30m [34mdplyr[30m::[32mfilter()[30m     masks [34mstats[30m::filter()
+[31mx[30m [34mdplyr[30m::[32mlag()[30m        masks [34mstats[30m::lag()
+[31mx[30m [34mpurrr[30m::[32mwhen()[30m       masks [34mforeach[30m::when()[39m
+"
+"0","library(magrittr, warn.conflicts = FALSE, quietly = TRUE)"
+"0","library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)"
+"0","library(knitr, warn.conflicts = FALSE, quietly = TRUE)"
+"0","library(stargazer, warn.conflicts = FALSE, quietly = TRUE)"
+"2","
+Please cite as: 
+
+"
+"2"," Hlavac, Marek (2018). stargazer: Well-Formatted Regression and Summary Statistics Tables.
+"
+"2"," R package version 5.2.1. https://CRAN.R-project.org/package=stargazer 
+
+"
+"0","set.seed(5609)"
+"0","theme_minimal2 <- theme_minimal() %>%  theme_set()"
+"0","theme_minimal2 <-"
+"0","  theme_update("
+"0","    panel.border = element_rect("
+"0","      linetype = ""solid"""
+"0","      ,colour = ""grey92"""
+"0","      ,fill = NA"
+"0","    )"
+"0","    ,strip.background = element_rect("
+"0","      linetype = ""solid"""
+"0","      ,colour = ""grey92"""
+"0","        ,fill = NA"
+"0","      )"
+"0","    )"
+"0","cv.adaptive.glmnet <- "
+"0","  function("
+"0","    x"
+"0","    ,y"
+"0","    ,alpha = 1"
+"0","    ,gamma = 1"
+"0","    ,weights"
+"0","    ,nfolds = 10"
+"0","    ,parallel = FALSE"
+"0","    ,..."
+"0","  ){"
+"0","    cv.alasso.ridge <- "
+"0","      cv.glmnet("
+"0","        x = x"
+"0","        ,y = y"
+"0","        ,alpha = 0"
+"0","        ,nfolds = nfolds"
+"0","        ,parallel = parallel"
+"0","      )"
+"0","    "
+"0","    cv.alasso.weights <- 1 / abs(coef(object = cv.alasso.ridge, s = ""lambda.min"", exact = TRUE)[-1, 1])^(gamma)"
+"0","    "
+"0","    cv.alasso.model <-   "
+"0","      cv.glmnet("
+"0","        x = x"
+"0","        ,y = y"
+"0","        ,alpha = alpha"
+"0","        ,penalty.factor = cv.alasso.weights"
+"0","      )"
+"0","    cv.alasso.model"
+"0","  }"
+"0","banana_data <-"
+"0","  ""mybanana.txt"" %>% "
+"0","  read_tsv()"
+"2","Parsed with column specification:
+cols(
+  ID = col_integer(),
+  Weight = col_integer(),
+  Radius = col_double(),
+  Length = col_integer(),
+  Circumference = col_integer()
+)
+"
