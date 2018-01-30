@@ -25,11 +25,11 @@ output:
 The purpose of this study was to determine the most effective regression model to predict the weight of a banana using external measurements. This study also demonstrated multiple techniques for developing regression models. These models were then examined to demonstrate their effectiveness at creating regression models.
 
 \section{Data Collection}
-First a small sample set of bananas were purchased from The Real Canadian Superstore.
+First a small sample set bananas were purchased from the Real Canadian Superstore. The weight, length, diameter and circumference were then calculated using a scale and a ruler. 
+
+In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calcuated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calcuated and determined to be approximately 0.60357. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the mimium sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
 
 \section{Appendix}
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
@@ -224,14 +224,30 @@ summary(banana_reg_02)
 summary(banana_reg_03)
 summary(banana_reg_04)
 
-  kable(anova(banana_reg_02, banana_reg_01))
+kable(anova(banana_reg_02, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_02))
 
+<<<<<<< HEAD
  banana_data %>% 
    cv.lm(
      Weight_log ~ Length_log + Radius_log
    )
+=======
+
+banana_reg_cv <- 
+  banana_data %>%
+  cv.lm(
+    Weight_log ~ Length_log + Radius_log
+    ,plotit = FALSE
+  )
+banana_reg_cv %>% 
+  mutate(
+    `CV Residual` = (cvpred) - (Weight_log)
+    ,Residual = Predicted - Weight_log
+  )
+
+>>>>>>> 7f93cf18aec12272f4d98f8750fa67c4efb08fde
 
 banana_ind <- 
   banana_data %>% 
@@ -295,18 +311,15 @@ for(i in 1:1000){
     banana_data %>%
     sample_n(10) %>% 
     select(
-      -c(
-        ID
-        ,Weight
-        ,Radius
-        ,Length
-        ,Circumference
-      )
+      Weight
+      ,Radius
+      ,Length
+      # ,Circumference
     ) %>% 
     cor()
   
-  xy_vec <- banana_cor[2:4, 1]
-  C_mat <- banana_cor[2:4, 2:4]
+  xy_vec <- banana_cor[2:3, 1]
+  C_mat <- banana_cor[2:3, 2:3]
   
   rsquare[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
 }
@@ -314,7 +327,7 @@ rsquare %>%
   summary()
 ```
 
-<<<<<<< HEAD
+# Cross Validation
 ```{r Testing}
 #Calculate the Mean Absolute Error
 
@@ -323,7 +336,7 @@ rsquare %>%
 #Comparison MAE and MPAE values
 ```
 
-=======
+## MAE
 ```{r MAE}
 PvsA <- 
   tibble(
@@ -340,4 +353,3 @@ PvsA %>%
     ,MPAE = mean(PAE)
   )
 ```
->>>>>>> 771a4e93bf89dfd90ccb29af6ebcdb6452dd3e3e
