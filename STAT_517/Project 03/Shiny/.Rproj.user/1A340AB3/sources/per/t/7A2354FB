@@ -5,13 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "829125334",
+    "hash" : "555575472",
     "id" : "7A2354FB",
-    "lastKnownWriteTime" : 1516745152,
-    "last_content_update" : 1516745152,
+    "lastKnownWriteTime" : 1516908452,
+    "last_content_update" : 1516908452700,
     "path" : "C:/Users/scott/OneDrive/Documents/GitHub/school_projects/STAT_517/Project 03/Shiny/server.R",
     "project_path" : "server.R",
     "properties" : {
+        "cursorPosition" : "58,87",
+        "scrollLine" : "35"
     },
     "relative_order" : 1,
     "source_on_save" : false,

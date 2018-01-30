@@ -1,0 +1,4 @@
+"0","banana_lasso_cvfit_02 %>% "
+"0","  coef(s = ""lambda.1se"") %>% "
+"0","  as.matrix() %>% "
+"0","  kable()"
