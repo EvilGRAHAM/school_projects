@@ -1,5 +1,5 @@
 ---
-title: "Does Size Matter?"
+title: "Does Size Matter? (Estimation of Banana Weight with a regression modeling appraoch)"
 author: "Scott Graham, Kaisa Roggeveen"
 date: "February 13, 2018"
 header-includes:
@@ -17,6 +17,12 @@ header-includes:
 output:
   pdf_document: default
 ---
+
+\section{Summary}
+
+
+\section{Introduction}
+The purpose of this study was to determine the most effective regression model to predict the weight of a banana using external measurements. This study also demonstrated multiple techniques for developing regression models. These models were then examined to demonstrate their effectiveness at creating regression models.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -301,3 +307,12 @@ for(i in 1:1000){
 rsquare %>% 
   summary()
 ```
+
+```{r Testing}
+#Calculate the Mean Absolute Error
+
+#Caculate the Mean Absolute Percentage Error
+
+#Comparison MAE and MPAE values
+```
+
