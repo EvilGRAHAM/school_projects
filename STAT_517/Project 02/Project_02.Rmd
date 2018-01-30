@@ -218,7 +218,7 @@ summary(banana_reg_02)
 summary(banana_reg_03)
 summary(banana_reg_04)
 
-kable(anova(banana_reg_02, banana_reg_01))
+  kable(anova(banana_reg_02, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_02))
 
@@ -308,6 +308,7 @@ rsquare %>%
   summary()
 ```
 
+<<<<<<< HEAD
 ```{r Testing}
 #Calculate the Mean Absolute Error
 
@@ -316,3 +317,21 @@ rsquare %>%
 #Comparison MAE and MPAE values
 ```
 
+=======
+```{r MAE}
+PvsA <- 
+  tibble(
+    Predicted = exp(predict(banana_lasso_cvfit_01, newx = banana_ind, s = "lambda.min")[, "1"])
+    ,Actual = banana_dep[, "Weight"]
+  ) %>% 
+  mutate(
+    AE = abs(Actual - Predicted)
+    ,PAE = AE/Actual
+  ) 
+PvsA %>% 
+  summarize(
+    MAE = mean(AE)
+    ,MPAE = mean(PAE)
+  )
+```
+>>>>>>> 771a4e93bf89dfd90ccb29af6ebcdb6452dd3e3e
