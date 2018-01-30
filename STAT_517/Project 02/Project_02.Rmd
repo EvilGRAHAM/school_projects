@@ -218,14 +218,23 @@ summary(banana_reg_02)
 summary(banana_reg_03)
 summary(banana_reg_04)
 
-  kable(anova(banana_reg_02, banana_reg_01))
+kable(anova(banana_reg_02, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_02))
 
-# banana_data %>% 
-#   cv.lm(
-#     Weight_log ~ Length_log + Radius_log
-#   )
+
+banana_reg_cv <- 
+  banana_data %>%
+  cv.lm(
+    Weight_log ~ Length_log + Radius_log
+    ,plotit = FALSE
+  )
+banana_reg_cv %>% 
+  mutate(
+    `CV Residual` = (cvpred) - (Weight_log)
+    ,Residual = Predicted - Weight_log
+  )
+
 
 banana_ind <- 
   banana_data %>% 
@@ -289,18 +298,15 @@ for(i in 1:1000){
     banana_data %>%
     sample_n(10) %>% 
     select(
-      -c(
-        ID
-        ,Weight
-        ,Radius
-        ,Length
-        ,Circumference
-      )
+      Weight
+      ,Radius
+      ,Length
+      # ,Circumference
     ) %>% 
     cor()
   
-  xy_vec <- banana_cor[2:4, 1]
-  C_mat <- banana_cor[2:4, 2:4]
+  xy_vec <- banana_cor[2:3, 1]
+  C_mat <- banana_cor[2:3, 2:3]
   
   rsquare[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
 }
@@ -308,7 +314,7 @@ rsquare %>%
   summary()
 ```
 
-<<<<<<< HEAD
+# Cross Validation
 ```{r Testing}
 #Calculate the Mean Absolute Error
 
@@ -317,7 +323,7 @@ rsquare %>%
 #Comparison MAE and MPAE values
 ```
 
-=======
+## MAE
 ```{r MAE}
 PvsA <- 
   tibble(
@@ -334,4 +340,3 @@ PvsA %>%
     ,MPAE = mean(PAE)
   )
 ```
->>>>>>> 771a4e93bf89dfd90ccb29af6ebcdb6452dd3e3e
