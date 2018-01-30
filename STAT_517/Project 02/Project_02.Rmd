@@ -24,6 +24,12 @@ output:
 \section{Introduction}
 The purpose of this study was to determine the most effective regression model to predict the weight of a banana using external measurements. This study also demonstrated multiple techniques for developing regression models. These models were then examined to demonstrate their effectiveness at creating regression models.
 
+\section{Data Collection}
+First a small sample set of bananas were purchased from The Real Canadian Superstore.
+
+\section{Appendix}
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
@@ -222,10 +228,10 @@ summary(banana_reg_04)
 kable(anova(banana_reg_03, banana_reg_01))
 kable(anova(banana_reg_03, banana_reg_02))
 
-# banana_data %>% 
-#   cv.lm(
-#     Weight_log ~ Length_log + Radius_log
-#   )
+ banana_data %>% 
+   cv.lm(
+     Weight_log ~ Length_log + Radius_log
+   )
 
 banana_ind <- 
   banana_data %>% 
@@ -281,7 +287,7 @@ banana_lasso_cvfit_02 %>%
   as.matrix() %>% 
   kable()
 ```
-
+\subsection{Data Collection}
 ```{r Sample Size, cache=TRUE}
 rsquare <- c()
 for(i in 1:1000){
