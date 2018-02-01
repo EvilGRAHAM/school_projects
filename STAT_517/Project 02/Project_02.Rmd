@@ -29,6 +29,24 @@ First a small sample set bananas were purchased from the Real Canadian Superstor
 
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calcuated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calcuated and determined to be approximately 0.60357. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the mimium sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
 
+\section{Analysis}
+To begin analysis a model using all predictor variables was created. In this case the density of the banana is assumed to be a constant.
+\begin{equation}
+  log(Weight) = log(length) + log(radius) + log(circumference)
+\end{equation}
+In the second model the predictor variable, circumference, was removed. 
+\begin{equation}
+  log(Weight) = log(length) + log(radius) + log(circumference)
+\end{equation}
+The third model considered only one predictor, radius.
+\begin{equation}
+  log(Weight) = log(radius)
+\end{equation}
+The fourth model considered the predictor, length.
+\begin{equation}
+  log(Weight) = log(length)
+\end{equation}
+
 \section{Appendix}
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -185,7 +203,7 @@ banana_data %>%
 ```
 
 ```{r Models}
-banana_data <- 
+banana_data <-
   banana_data %>% 
   mutate_at(
     .vars = vars(Weight:Circumference)
