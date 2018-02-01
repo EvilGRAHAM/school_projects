@@ -127,20 +127,23 @@ $$
 $$
 Then:
 $$
-  \log(W) = \log(L) + \log(R) + \log(C)
+  \log(W) = \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R) + \beta_{3}\log(C) \implies
+  W = e^{\beta_{0} + } \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
 $$
-In the second model the predictor variable, circumference, was removed. 
+In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
 $$
-  \log(W) = \log(L) + \log(R)
+  \log(W) = \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R)
 $$
-The third model considered only one predictor, radius.
+The third model considered the predictor, length.
 $$
-  \log(W) = \log(R)
+  \log(W) = \beta_{0} + \beta_{1}\log(L)
 $$
-The fourth model considered the predictor, length.
+
+The fourth model considered only one predictor, radius.
 $$
-  \log(W) = \log(L)
+  \log(W) = \beta_{0} + \beta_{2}\log(R)
 $$
+
 ```{r Models}
 banana_data <-
   banana_data %>% 
@@ -223,22 +226,22 @@ banana_lasso_cvfit_01 %>%
   as.matrix() %>% 
   kable()
 
-banana_lasso_cvfit_02 <-
-  cv.adaptive.glmnet(
-    x = banana_ind
-    ,y = banana_dep[, "Weight"]
-    ,alpha = 1
-  )
-
-autoplot(banana_lasso_cvfit_02)
-banana_lasso_cvfit_02 %>% 
-  coef(s = "lambda.min") %>% 
-  as.matrix() %>% 
-  kable()
-banana_lasso_cvfit_02 %>% 
-  coef(s = "lambda.1se") %>% 
-  as.matrix() %>% 
-  kable()
+# banana_lasso_cvfit_02 <-
+#   cv.adaptive.glmnet(
+#     x = banana_ind
+#     ,y = banana_dep[, "Weight"]
+#     ,alpha = 1
+#   )
+# 
+# autoplot(banana_lasso_cvfit_02)
+# banana_lasso_cvfit_02 %>% 
+#   coef(s = "lambda.min") %>% 
+#   as.matrix() %>% 
+#   kable()
+# banana_lasso_cvfit_02 %>% 
+#   coef(s = "lambda.1se") %>% 
+#   as.matrix() %>% 
+#   kable()
 ```
 
 # Appendix
