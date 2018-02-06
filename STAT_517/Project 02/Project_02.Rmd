@@ -204,7 +204,7 @@ pander(summary(banana_reg_04))
 #   )
 # toLatex(mtable123)
 
-pander(anova(banana_reg_02, banana_reg_01))
+pander(anova(banana_reg_02, banana_reg_01), caption = "foo")
 pander(anova(banana_reg_03, banana_reg_01))
 pander(anova(banana_reg_03, banana_reg_02))
 
@@ -264,12 +264,14 @@ banana_lasso_cvfit_01 %>%
 #   kable()
 ```
 # Recommendations
-The model for best banana weight prediction is determined to be
+It can be determiend that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
 $$
-log(W) = \beta_0 + \beta_1log(R)\\
-log(W) = 0.3046 + 1.669log(R)
+  \log(W) = \beta_{0} + \beta_{1}\log(R)
 $$
-
+$$
+  \log(W) = 0.3046 + 1.669\log(R)
+$$
+The predictor variable radius, was more significantly correlated to the weight in comparison to circumference and length. 
 
 # Appendix
 
