@@ -141,6 +141,7 @@ $$
   W = 
   e^{\beta_{0}} \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
 $$
+
 ```{r Reg 01}
 banana_reg_01 <-
   banana_data %>% 
@@ -150,6 +151,7 @@ banana_reg_01 <-
   )
 pander(summary(banana_reg_01))
 ```
+This returned values with insignificant p-values
 
 In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
 $$
@@ -263,6 +265,7 @@ banana_lasso_cvfit_01 %>%
 #   as.matrix() %>% 
 #   kable()
 ```
+
 # Recommendations
 It can be determiend that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
 $$
@@ -274,8 +277,6 @@ $$
 The predictor variable radius, was more significantly correlated to the weight in comparison to circumference and length. 
 
 # Appendix
-
-
 ```{r Visualizations}
 banana_data %>%
   select(
