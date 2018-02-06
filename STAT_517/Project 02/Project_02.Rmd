@@ -81,6 +81,13 @@ cv.adaptive.glmnet <-
 banana_data <-
   "mybanana.txt" %>% 
   read_tsv()
+
+banana_data <-
+  banana_data %>% 
+  mutate_at(
+    .vars = vars(Weight:Circumference)
+    ,.funs = funs(log = log)
+  )
 ```
 
 # Summary
@@ -134,60 +141,59 @@ $$
   W = 
   e^{\beta_{0}} \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
 $$
-In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
-$$
-  \log(W) = \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R)
-$$
-The third model considered the predictor, length.
-$$
-  \log(W) = \beta_{0} + \beta_{1}\log(L)
-$$
-
-The fourth model considered only one predictor, radius.
-$$
-  \log(W) = \beta_{0} + \beta_{2}\log(R)
-$$
-
-```{r Models, results='asis'}
-banana_data <-
-  banana_data %>% 
-  mutate_at(
-    .vars = vars(Weight:Circumference)
-    ,.funs = funs(log = log)
-  )
-
+```{r Reg 01}
 banana_reg_01 <-
   banana_data %>% 
   lm(
     Weight_log ~ Length_log + Radius_log + Circumference_log
     ,data = .
   )
+pander(summary(banana_reg_01))
+```
 
+In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
+$$
+  \log(W) = \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R)
+$$
+```{r Reg 02}
 banana_reg_02 <-
   banana_data %>% 
   lm(
-    Weight_log ~ Radius_log + Length_log
+    Weight_log ~ Length_log + Radius_log
     ,data = .
   )
+pander(summary(banana_reg_02))
+```
 
+The third model considered the predictor, length.
+$$
+  \log(W) = \beta_{0} + \beta_{1}\log(L)
+$$
+```{r Reg 03}
 banana_reg_03 <-
-  banana_data %>% 
-  lm(
-    Weight_log ~ Radius_log
-    ,data = .
-  )
-
-banana_reg_04 <-
   banana_data %>% 
   lm(
     Weight_log ~ Length_log
     ,data = .
   )
-
-pander(summary(banana_reg_02))
 pander(summary(banana_reg_03))
-pander(summary(banana_reg_04))
+```
 
+The fourth model considered only one predictor, radius.
+$$
+  \log(W) = \beta_{0} + \beta_{2}\log(R)
+$$
+```{r Reg 04}
+banana_reg_04 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Radius_log
+    ,data = .
+  )
+pander(summary(banana_reg_04))
+```
+
+```{r Models}
 # mtable123 <-
 #   mtable(
 #     "M1" = banana_reg_01
@@ -263,7 +269,16 @@ banana_lasso_cvfit_01 %>%
 
 ```{r Visualizations}
 banana_data %>%
-  select(-ID) %>% 
+  select(
+    -c(
+      ID
+      ,Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
+  # select(-ID) %>% 
   cor() %>% 
   as.data.frame() %>%  
   rownames_to_column() %>% 
@@ -291,10 +306,19 @@ banana_data %>%
     axis.text.x = element_text(angle = 90, hjust = 1)
     ,axis.title.x = element_blank()
     ,axis.title.y = element_blank()
+    ,panel.grid = element_blank()
   )
 
 banana_tidy <- 
   banana_data %>% 
+  select(
+    -c(
+      Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
   gather(
     key = "Type"
     ,value = "Measurement"
@@ -319,6 +343,14 @@ banana_tidy %>%
   )
 
 banana_data %>% 
+  select(
+    -c(
+      Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
   gather(
     key = "Type"
     ,value = "Measurement"
