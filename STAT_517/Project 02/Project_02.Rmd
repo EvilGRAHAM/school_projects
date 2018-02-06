@@ -126,7 +126,7 @@ rsquare %>%
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare), 4)`. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
 
 # Analysis
-To begin analysis a model using all predictor variables was created. In this case the density of the banana is assumed to be a constant.
+To begin analysis a model using all predictor variables was created. In this case the density of the banana is assumed to be a constant. In the following models all measured bananas were considered. 
 
 Let:
 $$
@@ -206,9 +206,9 @@ pander(summary(banana_reg_04))
 #   )
 # toLatex(mtable123)
 
-pander(anova(banana_reg_02, banana_reg_01), caption = "foo")
-pander(anova(banana_reg_03, banana_reg_01))
-pander(anova(banana_reg_03, banana_reg_02))
+pander(anova(banana_reg_02, banana_reg_01), caption = "Analysis of Variance Table: Model 1 vs. Model 2")
+pander(anova(banana_reg_03, banana_reg_01), caption = "Analysis of Variance Table: Model 1 vs. Model 3")
+pander(anova(banana_reg_03, banana_reg_02), caption = "Analysis of Variance Table: Model 2 vs. Model 3")
 
 
 banana_ind <- 
@@ -266,15 +266,20 @@ banana_lasso_cvfit_01 %>%
 #   kable()
 ```
 
+## Removal of Outliers
+The second part of the analysis included removing any potential outliers from the analysis. In this case, one outlier was removed.
+
+
 # Recommendations
-It can be determiend that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
+Using the first set of data before the outlier was removed, it can be determiend that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
 $$
   \log(W) = \beta_{0} + \beta_{1}\log(R)
 $$
 $$
   \log(W) = 0.3046 + 1.669\log(R)
 $$
-The predictor variable radius, was more significantly correlated to the weight in comparison to circumference and length. 
+After the removal of the outlier, the model that was determined to be the best predictor for banana weight was the following:
+
 
 # Appendix
 ```{r Visualizations}
