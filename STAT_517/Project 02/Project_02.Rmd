@@ -263,6 +263,13 @@ banana_lasso_cvfit_01 %>%
 #   as.matrix() %>% 
 #   kable()
 ```
+# Recommendations
+The model for best banana weight prediction is determined to be
+$$
+log(W) = \beta_0 + \beta_1log(R)\\
+log(W) = 0.3046 + 1.669log(R)
+$$
+
 
 # Appendix
 

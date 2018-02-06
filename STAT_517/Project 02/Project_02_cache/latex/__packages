@@ -19,3 +19,5 @@ knitr
 stargazer
 bindrcpp
 pander
+MASS
+memisc
