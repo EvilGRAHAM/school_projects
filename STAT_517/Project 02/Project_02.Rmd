@@ -1,5 +1,5 @@
 ---
-title: "Does Size Matter? (Estimation of Banana Weight with a regression modeling appraoch)"
+title: "Does Size Matter? (Estimation of Banana Weight with a Regression Modeling Approach)"
 author: "Scott Graham, Kaisa Roggeveen"
 date: "February 13, 2018"
 header-includes:
@@ -20,13 +20,14 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+library(pander, warn.conflicts = FALSE, quietly = TRUE)
+library(memisc, warn.conflicts = FALSE, quietly = TRUE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
 library(glmnet, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
 library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
 library(knitr, warn.conflicts = FALSE, quietly = TRUE)
-library(stargazer, warn.conflicts = FALSE, quietly = TRUE)
 
 set.seed(5609)
 
@@ -111,7 +112,8 @@ for(i in 1:1000){
   rsquare[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
 }
 rsquare %>% 
-  summary()
+  summary() %>% 
+  pander()
 ```
 
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare), 4)`. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
@@ -121,14 +123,16 @@ To begin analysis a model using all predictor variables was created. In this cas
 
 Let:
 $$
-  W = \text{Weight (g)},
-  L = \text{Length (mm)},
+  W = \text{Weight (g), }
+  L = \text{Length (mm), }
   R = \text{Radius (mm)}
 $$
 Then:
 $$
-  \log(W) = \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R) + \beta_{3}\log(C) \implies
-  W = e^{\beta_{0} + } \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
+  \log(W) = 
+  \beta_{0} + \beta_{1}\log(L) + \beta_{2}\log(R) + \beta_{3}\log(C) \implies
+  W = 
+  e^{\beta_{0}} \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
 $$
 In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
 $$
@@ -144,7 +148,7 @@ $$
   \log(W) = \beta_{0} + \beta_{2}\log(R)
 $$
 
-```{r Models}
+```{r Models, results='asis'}
 banana_data <-
   banana_data %>% 
   mutate_at(
@@ -179,14 +183,24 @@ banana_reg_04 <-
     Weight_log ~ Length_log
     ,data = .
   )
-summary(banana_reg_01)
-summary(banana_reg_02)
-summary(banana_reg_03)
-summary(banana_reg_04)
 
-kable(anova(banana_reg_02, banana_reg_01))
-kable(anova(banana_reg_03, banana_reg_01))
-kable(anova(banana_reg_03, banana_reg_02))
+pander(summary(banana_reg_02))
+pander(summary(banana_reg_03))
+pander(summary(banana_reg_04))
+
+# mtable123 <-
+#   mtable(
+#     "M1" = banana_reg_01
+#     ,"M2" = banana_reg_02
+#     ,"M3" = banana_reg_03
+#     ,"M4" = banana_reg_04
+#     ,summary.stats = c('R-squared','F','p','N')
+#   )
+# toLatex(mtable123)
+
+pander(anova(banana_reg_02, banana_reg_01))
+pander(anova(banana_reg_03, banana_reg_01))
+pander(anova(banana_reg_03, banana_reg_02))
 
 
 banana_ind <- 
