@@ -26,6 +26,7 @@ library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
 library(glmnet, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(broom, warn.conflicts = FALSE, quietly = TRUE)
 library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
 library(knitr, warn.conflicts = FALSE, quietly = TRUE)
 
@@ -80,13 +81,30 @@ cv.adaptive.glmnet <-
 
 banana_data <-
   "mybanana.txt" %>% 
-  read_tsv()
+  read_tsv() #%>% 
+  # filter(Length >= 200)
 
 banana_data <-
   banana_data %>% 
   mutate_at(
     .vars = vars(Weight:Circumference)
     ,.funs = funs(log = log)
+  )
+
+banana_tidy <- 
+  banana_data %>% 
+  select(
+    -c(
+      Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
+  gather(
+    key = "Type"
+    ,value = "Measurement"
+    ,-ID
   )
 ```
 
@@ -126,7 +144,51 @@ rsquare %>%
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare), 4)`. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
 
 # Analysis
-To begin analysis a model using all predictor variables was created. In this case the density of the banana is assumed to be a constant. In the following models all measured bananas were considered. 
+```{r Summary Stats}
+banana_summary <-
+  cbind(
+    Statistic = 
+      c(
+        "Min."
+        ,"1st Qu."
+        ,"Median"
+        ,"Mean"
+        ,"3rd Qu."
+        ,"Max"
+      )
+    ,banana_data %>% 
+      select(
+        -c(
+          ID
+          ,Weight_log
+          ,Radius_log
+          ,Length_log
+          ,Circumference_log
+        )
+      ) %>% 
+      map_df(summary)
+  ) %>% 
+  as.tibble()
+kable(banana_summary)
+
+banana_tidy %>% 
+  ggplot(aes(x = Measurement, colour = Type)) +
+  geom_histogram(
+    aes(y = ..density..)
+    ,alpha = 0
+    ,binwidth = function(x) nclass.FD(x)
+  ) +
+  geom_density() +
+  facet_wrap(
+    ~ Type
+    ,scales = "free"
+  ) +
+  scale_colour_brewer(
+    palette = "Dark2"
+    ,type = "qual"
+  )
+```
+To begin analysis, a model using all predictor variables was created. In this case the density of the banana is assumed to be a constant. In the following models all measured bananas were considered. 
 
 Let:
 $$
@@ -141,7 +203,6 @@ $$
   W = 
   e^{\beta_{0}} \times L^{\beta_{1}} \times R^{\beta_{2}} \times C^{\beta_{3}}
 $$
-
 ```{r Reg 01}
 banana_reg_01 <-
   banana_data %>% 
@@ -151,7 +212,6 @@ banana_reg_01 <-
   )
 pander(summary(banana_reg_01))
 ```
-This returned values with insignificant p-values
 
 In the second model the predictor variable, circumference, was removed. This is because $C=2\pi R$.
 $$
@@ -196,20 +256,31 @@ pander(summary(banana_reg_04))
 ```
 
 ```{r Models}
-# mtable123 <-
-#   mtable(
-#     "M1" = banana_reg_01
-#     ,"M2" = banana_reg_02
-#     ,"M3" = banana_reg_03
-#     ,"M4" = banana_reg_04
-#     ,summary.stats = c('R-squared','F','p','N')
-#   )
-# toLatex(mtable123)
-
 pander(anova(banana_reg_02, banana_reg_01), caption = "Analysis of Variance Table: Model 1 vs. Model 2")
 pander(anova(banana_reg_03, banana_reg_01), caption = "Analysis of Variance Table: Model 1 vs. Model 3")
 pander(anova(banana_reg_03, banana_reg_02), caption = "Analysis of Variance Table: Model 2 vs. Model 3")
 
+tibble(
+  Predicted =
+    banana_reg_02 %>% 
+    predict() %>% 
+    exp()
+  ,Actual = banana_data$Weight
+  ,ID = banana_data$ID
+  ,`Std Residuals` = stdres(banana_reg_02)
+) %>% 
+  mutate(Residual = Actual - Predicted) %>% 
+  ggplot(aes(x = Predicted, y = `Std Residuals`)) +
+  # geom_point() +
+  geom_label(aes(label = ID)) +
+  geom_smooth(
+    method = "loess"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  )
 
 banana_ind <- 
   banana_data %>% 
@@ -269,6 +340,48 @@ banana_lasso_cvfit_01 %>%
 ## Removal of Outliers
 The second part of the analysis included removing any potential outliers from the analysis. In this case, one outlier was removed.
 
+## Cross Validation
+```{r CV}
+# banana_data %>% 
+#    cv.lm(
+#      Weight_log ~ Length_log + Radius_log
+#    )
+
+banana_reg_cv <- 
+  banana_data %>%
+  cv.lm(
+    Weight_log ~ Length_log + Radius_log
+    ,plotit = FALSE
+  )
+banana_reg_cv %>% 
+  mutate(
+    `CV Residual` = (cvpred) - (Weight_log)
+    ,Residual = Predicted - Weight_log
+  )
+#Calculate the Mean Absolute Error
+
+#Caculate the Mean Absolute Percentage Error
+
+#Comparison MAE and MPAE values
+```
+
+### MAE
+```{r MAE}
+PvsA <- 
+  tibble(
+    Predicted = exp(predict(banana_lasso_cvfit_01, newx = banana_ind, s = "lambda.min")[, "1"])
+    ,Actual = banana_dep[, "Weight"]
+  ) %>% 
+  mutate(
+    AE = abs(Actual - Predicted)
+    ,PAE = AE/Actual
+  ) 
+PvsA %>% 
+  summarize(
+    MAE = mean(AE)
+    ,MPAE = mean(PAE)
+  )
+```
 
 # Recommendations
 Using the first set of data before the outlier was removed, it can be determiend that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
@@ -324,39 +437,6 @@ banana_data %>%
     ,panel.grid = element_blank()
   )
 
-banana_tidy <- 
-  banana_data %>% 
-  select(
-    -c(
-      Weight_log
-      ,Radius_log
-      ,Length_log
-      ,Circumference_log
-    )
-  ) %>% 
-  gather(
-    key = "Type"
-    ,value = "Measurement"
-    ,-ID
-  )
-
-banana_tidy %>% 
-  ggplot(aes(x = Measurement, colour = Type)) +
-  geom_histogram(
-    aes(y = ..density..)
-    ,alpha = 0
-    ,binwidth = function(x) nclass.FD(x)
-  ) +
-  geom_density() +
-  facet_wrap(
-    ~ Type
-    ,scales = "free"
-  ) +
-  scale_colour_brewer(
-    palette = "Dark2"
-    ,type = "qual"
-  )
-
 banana_data %>% 
   select(
     -c(
@@ -395,49 +475,5 @@ banana_data %>%
   scale_colour_brewer(
     palette = "Set2"
     ,type = "qual"
-  )
-```
-
-
-# Cross Validation
-```{r CV}
-# banana_data %>% 
-#    cv.lm(
-#      Weight_log ~ Length_log + Radius_log
-#    )
-
-banana_reg_cv <- 
-  banana_data %>%
-  cv.lm(
-    Weight_log ~ Length_log + Radius_log
-    ,plotit = FALSE
-  )
-banana_reg_cv %>% 
-  mutate(
-    `CV Residual` = (cvpred) - (Weight_log)
-    ,Residual = Predicted - Weight_log
-  )
-#Calculate the Mean Absolute Error
-
-#Caculate the Mean Absolute Percentage Error
-
-#Comparison MAE and MPAE values
-```
-
-## MAE
-```{r MAE}
-PvsA <- 
-  tibble(
-    Predicted = exp(predict(banana_lasso_cvfit_01, newx = banana_ind, s = "lambda.min")[, "1"])
-    ,Actual = banana_dep[, "Weight"]
-  ) %>% 
-  mutate(
-    AE = abs(Actual - Predicted)
-    ,PAE = AE/Actual
-  ) 
-PvsA %>% 
-  summarize(
-    MAE = mean(AE)
-    ,MPAE = mean(PAE)
   )
 ```
