@@ -523,6 +523,28 @@ tibble(
         sum()
     )/(as.numeric(count(banana_reg_cv)))
 ) %>% 
+  kable(caption = "Calculated Error Terms for Log CV Model")
+
+tibble(
+  MSE =
+    (
+      banana_reg_cv %>% 
+        transmute((Weight - exp(cvpred))^2) %>% 
+        sum()
+    )/(as.numeric(count(banana_reg_cv)))
+  ,MAE =
+    (
+      banana_reg_cv %>% 
+        transmute(abs(Weight - exp(cvpred))) %>% 
+        sum()
+    )/(as.numeric(count(banana_reg_cv)))
+  ,MPAE =
+    (
+      banana_reg_cv %>% 
+        transmute(abs((Weight - exp(cvpred)) / Weight)) %>% 
+        sum()
+    )/(as.numeric(count(banana_reg_cv)))
+) %>% 
   kable(caption = "Calculated Error Terms for CV Model")
 ```
 
