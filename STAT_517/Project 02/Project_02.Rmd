@@ -75,25 +75,18 @@ banana_tidy <-
 
 
 # Summary
-
-
--What the report is about
--Conclusions drawn
-The intent of this study was to determine the most effective regression model to predict the weight of a banana using external measurements. This study also demonstrated multiple techniques for developing regression models. Some of the techniques that were used were, elimation of variables and removal of outliers. These models were then examined to demonstrate their effectiveness for predicting the weight of a banana.
+This study developed linear regression models to effectively predict the weight of bananas based on external measurements. In order to develop the different models the techniques used were, determining signifcance of variables, elimination of variables and elimination of outliers. The models were then compared by ANOVA. This study concludes that the weight of the banana is dependent on the length and the radius of the banana. 
 
 
 # Introduction
--What is the problem
--what is the structure of the report?
--What was the aim of the report?
+The weight of a banana is difficult to predict since it depends on density and volume, which are not easily measureable. In this study it was assumed that the density of the bananas remained consistent throughout the entire banana and that volume was approximately 
+$$  V = pi * r^2 * l $$, where r was the radius of the body and l was the curved length. 
 
-
-For the purpose of this study, it is assumed $\alpha=0.05$ for all tests done.
-
-
+This report states the data collection methods, the different methods and technqiues used for creating regression models, the analysis of the regression models and the recommendations for the best method to predict banana weight. For the purpose of this study, it is assumed $\alpha=0.05$ for all tests done.
 
 # Data Collection
-First a small sample set bananas were purchased from the Real Canadian Superstore. The weight, length, diameter and circumference were then calculated using a scale and a ruler. 
+
+First a small sample set of 24 bananas were purchased from the Real Canadian Superstore. The weight, length, diameter and circumference were then calculated using a scale and a ruler. This data was recorded using an Excel spreadsheet for futher analysis.  
 
 ```{r Sample Size, cache=TRUE}
 rsquare_sim <- c()
@@ -122,9 +115,14 @@ rsquare_sim %>%
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare_sim), 4)`. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
 
 
-
 # Analysis
 ## Preliminary Analysis
+To begin the analysis the summary statistics of all predictor variables were calculated and recorded in Table 2. The summary statistics were used to highlight the data to obtain a general understanding of the spread for each predictor variable. 
+
+Next graphs of the sampling distributions of the predictor variables were used to visualize the trends of the data in Figure 1. The graphs were examined for skewness and normality where, length appears to be highly skewed to the left, weight appears to be more normaly distributed circumference and radius are very similarly distributed with potential bimodal distribution.
+
+In Figure 2, correlation between weight and the predictor variables were produced. From the analysis of the graphs, circumference and radius appear to be much more highly correlated to weight than length.
+
 ```{r Summary Stats}
 banana_summary <-
   cbind(
@@ -151,6 +149,7 @@ banana_summary <-
   ) %>% 
   as.tibble()
 kable(banana_summary, caption = "Banana Summary Statisitcs")
+
 
 banana_tidy %>% 
   ggplot(aes(x = Measurement, colour = Type)) +
@@ -559,6 +558,10 @@ $$
   \ln(W) = 0.3046 + 1.669\ln(R)
 $$
 After the removal of the outlier, the model that was determined to be the best predictor for banana weight was the following:
+$$
+\ln(W) = \beta_{0} + \beta_{1}\ln(R) + \beta_{2}\ln(l)
+$$
+
 
 
 
