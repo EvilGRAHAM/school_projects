@@ -1,14 +1,16 @@
 ---
-title: "Does Size Matter? (Estimation of Banana Weight with a Regression Modeling Approach)"
+title: "Does Size Matter?"
 author: "Scott Graham, Kaisa Roggeveen"
 date: "February 13, 2018"
 output:
   ioslides_presentation:
     smaller: true
+    logo: Images/banana.png
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+#  (Estimation of Banana Weight with a Regression Modeling Approach)
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
 library(MASS, warn.conflicts = FALSE, quietly = TRUE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
@@ -60,6 +62,60 @@ banana_tidy <-
     ,value = "Measurement"
     ,-ID
   )
+
+banana_reg_02 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log + Radius_log
+    ,data = .
+  )
+
+banana_resid_data <- 
+  tibble(
+    Predicted = predict(banana_reg_02)
+    ,Actual = banana_data$Weight_log
+    ,ID = banana_data$ID
+    ,`Std Residuals` = stdres(banana_reg_02)
+    ,Leverage = hatvalues(banana_reg_02)
+  ) %>% 
+  mutate(Residual = Actual - Predicted)
+
+banana_data_post <-
+  banana_data %>% 
+    inner_join(
+    banana_resid_data
+    ,by = "ID"
+  ) %>% 
+  filter(
+    !(abs(`Std Residuals`) > 2 & Leverage > 0.2)
+  ) %>%
+  select(
+    -c(
+      Predicted
+      ,Actual
+      ,`Std Residuals`
+      ,Leverage
+      ,Residual
+    )
+  )
+
+banana_reg_cv <-
+  banana_data_post %>%
+  cv.lm(
+    Weight_log ~ Length_log + Radius_log
+    ,plotit = FALSE
+  )
+
+banana_train_control <- trainControl(method = "cv", number = 10)
+banana_caret_cv <- 
+  train(
+    Weight_log~.
+    ,data = 
+      banana_data_post %>% 
+      select(Weight_log, Length_log, Radius_log)
+    ,trControl = banana_train_control
+    ,method = "lm"
+  )
 ```
 \[
   \newcommand{\Prob}{\operatorname{P}}
@@ -75,175 +131,8 @@ banana_tidy <-
   \newcommand{\Logit}{{\operatorname{Logit}}}
 \]
 
-# Analysis
-## Preliminary Analysis
-```{r Summary Stats}
-banana_summary <-
-  cbind(
-    Statistic = 
-      c(
-        "Min."
-        ,"1st Qu."
-        ,"Median"
-        ,"Mean"
-        ,"3rd Qu."
-        ,"Max"
-      )
-    ,banana_data %>% 
-      select(
-        -c(
-          ID
-          ,Weight_log
-          ,Radius_log
-          ,Length_log
-          ,Circumference_log
-        )
-      ) %>% 
-      map_df(summary)
-  ) %>% 
-  as.tibble()
-kable(banana_summary, caption = "Banana Summary Statisitcs")
-
-
-banana_tidy %>% 
-  ggplot(aes(x = Measurement, colour = Type)) +
-  geom_histogram(
-    aes(y = ..density..)
-    ,alpha = 0
-    ,binwidth = function(x) nclass.FD(x)
-  ) +
-  geom_density() +
-  facet_wrap(
-    ~ Type
-    ,scales = "free"
-  ) +
-  scale_colour_brewer(
-    palette = "Dark2"
-    ,type = "qual"
-  ) +
-  labs(
-    title = "Figure 2: Sample Distributions of Banana Data"
-    ,y = "P(Y=y)"
-  ) +
-  theme(legend.position = "none")
-```
-
-```{r Visualizations}
-banana_data %>% 
-  select(
-    -c(
-      Weight_log
-      ,Radius_log
-      ,Length_log
-      ,Circumference_log
-    )
-  ) %>% 
-  gather(
-    key = "Type"
-    ,value = "Measurement"
-    ,-ID
-    ,-Weight
-  ) %>% 
-  ggplot(
-    aes(
-      x = Measurement
-      ,y = Weight
-      ,colour = Type
-    )
-  ) +
-  geom_smooth(
-    method = "loess"
-    ,se = FALSE
-  ) +
-  geom_smooth(
-    method = "lm"
-    ,se = FALSE
-  ) +
-  geom_point() +
-  facet_wrap(
-    ~ Type
-    ,scales = "free_x"
-  ) +
-  scale_colour_brewer(
-    palette = "Set2"
-    ,type = "qual"
-  ) +
-  labs(
-    title = "Figure 3: Weight vs. Predictors"
-    ,y = "Weight (g)"
-  ) +
-  theme(legend.position = "none")
-```
-
-
-## Initial Regression Models
-Let:
-$$
-  W = \text{Weight (g), }
-  L = \text{Length (mm), }
-  R = \text{Radius (mm), }
-  C = \text{Circumference (mm)}
-$$
-Then:
-$$
-  \ln(W) = \beta_{0} + \beta_{1}\ln(L) + \beta_{2}\ln(R)
-$$
-
-```{r Reg 02}
-banana_reg_02 <-
-  banana_data %>% 
-  lm(
-    Weight_log ~ Length_log + Radius_log
-    ,data = .
-  )
-pander(summary(banana_reg_02))
-```
-
-
 ## Removal of Outliers
-```{r Outlier Check}
-banana_resid_data <- 
-  tibble(
-    Predicted = predict(banana_reg_02)
-    ,Actual = banana_data$Weight_log
-    ,ID = banana_data$ID
-    ,`Std Residuals` = stdres(banana_reg_02)
-    ,Leverage = hatvalues(banana_reg_02)
-  ) %>% 
-  mutate(Residual = Actual - Predicted)
-
-banana_resid_data %>% 
-  ggplot(aes(x = Predicted, y = `Std Residuals`)) +
-  geom_hline(
-    aes(yintercept = -2)
-    ,linetype = "dashed"
-  ) +
-  geom_hline(
-    aes(yintercept = 2)
-    ,linetype = "dashed"
-  ) +
-  geom_point() +
-  geom_text(
-    data =
-      banana_resid_data %>% 
-      filter(abs(`Std Residuals`) >= 2)
-    ,aes(label = ID)
-    ,nudge_x = 0.005
-  ) +
-  geom_smooth(
-    method = "loess"
-    ,se = FALSE
-  ) +
-  geom_smooth(
-    method = "lm"
-    ,se = FALSE
-  ) +
-  labs(
-    title = "Figure 5: Standardized Residuals vs. Predicted for Model 02"
-    ,x = "Predicted (ln)"
-    ,y = "Standardized Residual (ln)"
-  )
-
+```{r Outlier Check, fig.height=3}
 banana_resid_data %>% 
   ggplot(aes(x = Leverage, y = `Std Residuals`)) +
   geom_hline(
@@ -271,8 +160,8 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
-    ,x = "Leverage (ln)"
+    # title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
+    x = "Leverage (ln)"
     ,y = "Standardized Residual (ln)"
   )
 
@@ -295,61 +184,19 @@ banana_data %>%
 ```
 
 
-## Cross Validation
-```{r CV DAAG, include=FALSE}
-banana_data_post <-
-  banana_data %>% 
-    inner_join(
-    banana_resid_data
-    ,by = "ID"
-  ) %>% 
-  filter(
-    !(abs(`Std Residuals`) > 2 & Leverage > 0.2)
-  ) %>%
-  select(
-    -c(
-      Predicted
-      ,Actual
-      ,`Std Residuals`
-      ,Leverage
-      ,Residual
-    )
-  )
-
-banana_reg_cv <-
-  banana_data_post %>%
-  cv.lm(
-    Weight_log ~ Length_log + Radius_log
-    ,plotit = FALSE
-  )
-```
-
-```{r CV caret}
-banana_train_control <- trainControl(method = "cv", number = 10)
-banana_caret_cv <- 
-  train(
-    Weight_log~.
-    ,data = 
-      banana_data_post %>% 
-      select(Weight_log, Length_log, Radius_log)
-    ,trControl = banana_train_control
-    ,method = "lm"
-  )
-banana_caret_cv %>% 
-  summary() %>% 
-  pander()
-```
-
-This gives the model:
+## Recommended Model
+After the removal of the outlier, the model that was determined to be the best predictor for banana weight through cross validation was the following:
+$$
+  \ln(W) = 
+  \beta_{0} + \beta_{1}\ln(L) + \beta_{2}\ln(R) \implies
+$$
 $$
   W =
-  e^{-0.6249}L^{1.028}R^{1.957} =
-  0.00193L^{1.028}R^{1.957} \implies
-  D = \frac{0.00193}{\pi} =
-  0.000615g/cm
+  0.00193L^{1.028}R^{1.957} \approx
+  0.000615\pi LR^{2}
 $$
 
-
+## Cross Validation Error Estimation
 ### Mean Error
 $$
   y_{i} - \hat{y}_{i}
@@ -412,27 +259,5 @@ kable(mae_regular, caption = "Calculated Error Terms for CV Model")
 ```
 
 
-
-# Recommendations
-## First Model
-Using the first set of data before the outlier was removed, it can be determined that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
-$$
-  \ln(W) = 
-  \beta_{0} + \beta_{1}\ln(R) =
-  0.3046 + 1.669\ln(R)
-$$
-
-
-## Second Model
-After the removal of the outlier, the model that was determined to be the best predictor for banana weight through cross validation was the following:
-$$
-  \ln(W) = 
-  \beta_{0} + \beta_{1}\ln(L) + \beta_{2}\ln(R) \implies
-  W =
-  0.00193L^{1.028}R^{1.957} \approx
-  0.000615\pi LR^{2}
-$$
-
-# References
 ## References
 Knofczynski, G. T., & Mundfrom, D. (2007). Sample Sizes When Using Multiple Linear Regression for Prediction. Educational and Psychological Measurement, 68(3), 431-442. doi:10.1177/0013164407310131
