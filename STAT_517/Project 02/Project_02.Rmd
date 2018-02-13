@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
 library(MASS, warn.conflicts = FALSE, quietly = TRUE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
+library(caret, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
 library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
@@ -75,18 +76,16 @@ banana_tidy <-
 
 
 # Summary
-This study developed linear regression models to effectively predict the weight of bananas based on external measurements. In order to develop the different models the techniques used were, determining signifcance of variables, elimination of variables and elimination of outliers. The models were then compared by ANOVA. This study concludes that the weight of the banana is dependent on the length and the radius of the banana. 
+This study developed linear regression models to effectively predict the weight of bananas based on external measurements. In order to develop the different models the techniques used were, determining significance of variables, elimination of variables and elimination of outliers. The models were then compared by ANOVA. This study concludes that the weight of the banana is dependent on the length and the radius of the banana. 
 
 
 # Introduction
-The weight of a banana is difficult to predict since it depends on density and volume, which are not easily measureable. In this study it was assumed that the density of the bananas remained consistent throughout the entire banana and that volume was approximately 
-$$  V = pi * r^2 * l $$, where r was the radius of the body and l was the curved length. 
+The weight of a banana is difficult to predict since it depends on density and volume, which are not easily measurable. In this study it was assumed that the density of the bananas remained consistent throughout the entire banana and that volume was approximately $V = \pi R^{2}L$, where $R$ was the radius of the body and $L$ was the curved length. As such we have $W = VD = \pi R^{2}LD$.
 
-This report states the data collection methods, the different methods and technqiues used for creating regression models, the analysis of the regression models and the recommendations for the best method to predict banana weight. For the purpose of this study, it is assumed $\alpha=0.05$ for all tests done.
+This report states the data collection methods, the different methods and techniques used for creating regression models, the analysis of the regression models and the recommendations for the best method to predict banana weight. For the purpose of this study, it is assumed $\alpha=0.05$ for all tests done.
 
 # Data Collection
-
-First a small sample set of 24 bananas were purchased from the Real Canadian Superstore. The weight, length, diameter and circumference were then calculated using a scale and a ruler. This data was recorded using an Excel spreadsheet for futher analysis.  
+First a small sample set of 24 bananas were purchased from the Real Canadian Superstore. The weight, length, diameter and circumference were then calculated using a scale and a ruler. This data was recorded using an Excel spreadsheet for further analysis.  
 
 ```{r Sample Size, cache=TRUE}
 rsquare_sim <- c()
@@ -112,16 +111,20 @@ rsquare_sim %>%
   pander(caption = "Summary Statisitcs for Simulated R-Squared")
 ```
 
-In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare_sim), 4)`. From this the minimum sample size required was then determined from the table from Gregory T. Knofcznski's Sample Size When Using Multiple Linear Regression for Prediction, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas. 
+In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare_sim), 4)`. 
+
+![(Knofczynski, 2007)](Images/Sample Size Table.png)
+
+From this the minimum sample size required was then determined from the table from Figure 1, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas (Knofczynski, 2007).
 
 
 # Analysis
 ## Preliminary Analysis
 To begin the analysis the summary statistics of all predictor variables were calculated and recorded in Table 2. The summary statistics were used to highlight the data to obtain a general understanding of the spread for each predictor variable. 
 
-Next graphs of the sampling distributions of the predictor variables were used to visualize the trends of the data in Figure 1. The graphs were examined for skewness and normality where, length appears to be highly skewed to the left, weight appears to be more normaly distributed circumference and radius are very similarly distributed with potential bimodal distribution.
+Next graphs of the sampling distributions of the predictor variables were used to visualize the trends of the data in Figure 2. The graphs were examined for skewness and normality where, length appears to be highly skewed to the left, weight appears to be more normally distributed circumference and radius are very similarly distributed with potential bimodal distribution.
 
-In Figure 2, correlation between weight and the predictor variables were produced. From the analysis of the graphs, circumference and radius appear to be much more highly correlated to weight than length.
+In Figure 3, correlation between weight and the predictor variables were produced. From the analysis of the graphs, circumference and radius appear to be much more highly correlated to weight than length.
 
 ```{r Summary Stats}
 banana_summary <-
@@ -168,7 +171,7 @@ banana_tidy %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 01: Sample Distributions of Banana Data"
+    title = "Figure 2: Sample Distributions of Banana Data"
     ,y = "P(Y=y)"
   ) +
   theme(legend.position = "none")
@@ -215,7 +218,7 @@ banana_data %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 02: Weight vs. Predictors"
+    title = "Figure 3: Weight vs. Predictors"
     ,y = "Weight (g)"
   ) +
   theme(legend.position = "none")
@@ -250,7 +253,7 @@ banana_reg_01 <-
 pander(summary(banana_reg_01))
 ```
 
-None of the predictor variables were found to be statistically significant. This is due to the high degree of collinearity exhibited between Radius and Circumference. As such, in the second model, the predictor variable, circumference, was removed. This is because $C=2\pi R$, leading to collinearity. This can also be seen by examining the correlation plot produced by the variables:
+None of the predictor variables were found to be statistically significant. This is due to the high degree of collinearity exhibited between Radius and Circumference. As such, in the second model, the predictor variable, circumference, was removed. This is because $C=2\pi R$, leading to collinearity. This can also be seen by examining the correlation plot produced by the variables in Figure 4:
 ```{r Cor Plot}
 banana_data %>%
   select(
@@ -285,7 +288,7 @@ banana_data %>%
     ,palette = "RdBu"
     ,limits = c(-1, 1)
   ) +
-  labs(title= "Figure 03: Correlation Plot") +
+  labs(title= "Figure 4: Correlation Plot") +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
     ,axis.title.x = element_blank()
@@ -298,6 +301,8 @@ The second model considered only the predictor variables length and radius:
 \begin{equation}
   \ln(W) = \beta_{0} + \beta_{1}\ln(L) + \beta_{2}\ln(R)
 \end{equation}
+
+This model is similar to the one described in the Introduction, with $e^{\beta_{0}} \approx \pi D$. as such, it'd be reasonable to expect it to perform reasonably well.
 
 ```{r Reg 02}
 banana_reg_02 <-
@@ -410,7 +415,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 04: Standardized Residuals vs. Predicted for Model 02"
+    title = "Figure 5: Standardized Residuals vs. Predicted for Model 02"
     ,x = "Predicted (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -442,7 +447,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 05: Standardized Residuals vs. Leverage for Model 02"
+    title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
     ,x = "Leverage (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -465,11 +470,12 @@ banana_data %>%
   kable(caption = "Entries with a |Standardized Residual| >2")
 ```
 
-By looking at values with $|\text{Std. Residual}|>2$, we can identify potential outliers. Then, by examining the leverage of those outliers we can make a determination of whether or not they are severely distorting the regression line from the true slope. Although both 6 and 11 have a large standardized residual, only 6 has a large leverage associated with it, and as such is excluded from the dataset.
+By looking at values with $|\text{Std. Residual}|>2$, we can identify potential outliers. Then, by examining the leverage of those outliers we can make a determination of whether or not they are severely distorting the regression line from the true slope. Although both 6 and 11 have a large standardized residual, only 6 has a large leverage associated with it, and as such is excluded from the data set.
 
 
 ## Cross Validation
-```{r CV}
+We then performed cross validation as described in the `caret` package on Equation (2). For this 10-fold cross validation was used, and the following regression output was produced, using the post-outlier data.
+```{r CV DAAG, include=FALSE}
 banana_data_post <-
   banana_data %>% 
     inner_join(
@@ -495,56 +501,98 @@ banana_reg_cv <-
     Weight_log ~ Length_log + Radius_log
     ,plotit = FALSE
   )
-
-banana_reg_cv %>% 
-  pander(caption = "CV Model")
 ```
 
-### MAE
-```{r MAE}
-tibble(
-  MSE =
-    (
-      banana_reg_cv %>% 
-        transmute((Weight_log - cvpred)^2) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-  ,MAE =
-    (
-      banana_reg_cv %>% 
-        transmute(abs(Weight_log - cvpred)) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-  ,MPAE =
-    (
-      banana_reg_cv %>% 
-        transmute(abs((Weight_log - cvpred) / Weight_log)) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-) %>% 
-  kable(caption = "Calculated Error Terms for Log CV Model")
+```{r CV caret}
+# banana_reg_cv %>% 
+#   pander(caption = "CV Model")
 
-tibble(
-  MSE =
-    (
-      banana_reg_cv %>% 
-        transmute((Weight - exp(cvpred))^2) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-  ,MAE =
-    (
-      banana_reg_cv %>% 
-        transmute(abs(Weight - exp(cvpred))) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-  ,MPAE =
-    (
-      banana_reg_cv %>% 
-        transmute(abs((Weight - exp(cvpred)) / Weight)) %>% 
-        sum()
-    )/(as.numeric(count(banana_reg_cv)))
-) %>% 
-  kable(caption = "Calculated Error Terms for CV Model")
+banana_train_control <- trainControl(method = "cv", number = 10)
+banana_caret_cv <- 
+  train(
+    Weight_log~.
+    ,data = 
+      banana_data_post %>% 
+      select(Weight_log, Length_log, Radius_log)
+    ,trControl = banana_train_control
+    ,method = "lm"
+  )
+banana_caret_cv %>% 
+  summary() %>% 
+  pander()
+```
+
+This gives the model:
+$$
+  W =
+  e^{-0.6249}L^{1.028}R^{1.957} =
+  0.00193L^{1.028}R^{1.957} \implies
+  D = \frac{0.00193}{\pi} =
+  0.000615g/cm
+$$
+
+Which is very similar to that described in the Introduction section.
+
+### Mean Error
+The error was measured using the cross validated predictions, in both terms of the $\ln(W)$, and the $W$. Firstly, we found the Mean Squared Error (MSE), Mean Squared Error (MAE), and Mean Percent Absolute Error (MPAE). The residual was calculated as:
+$$
+  y_{i} - \hat{y}_{i}
+$$
+
+```{r MAE}
+mae_log <- 
+  tibble(
+    MSE =
+      (
+        banana_reg_cv %>% 
+          transmute((Weight_log - cvpred)^2) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs(Weight_log - cvpred)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MPAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs((Weight_log - cvpred) / Weight_log)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+  )
+kable(mae_log, caption = "Calculated Error Terms for Log CV Model")
+```
+
+For this, the residual term was put back into grams, and was calculated as following:
+
+$$
+  e^{y_{i}} - e^{\hat{y}_{i}}
+$$
+
+```{r MAE Log}
+mae_regular <- 
+  tibble(
+    MSE =
+      (
+        banana_reg_cv %>% 
+          transmute((Weight - exp(cvpred))^2) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs(Weight - exp(cvpred))) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MPAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs((Weight - exp(cvpred)) / Weight)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+  )
+kable(mae_regular, caption = "Calculated Error Terms for CV Model")
 ```
 
 
@@ -557,6 +605,7 @@ $$
 $$
   \ln(W) = 0.3046 + 1.669\ln(R)
 $$
+
 After the removal of the outlier, the model that was determined to be the best predictor for banana weight was the following:
 $$
 \ln(W) = \beta_{0} + \beta_{1}\ln(R) + \beta_{2}\ln(l)
@@ -564,10 +613,16 @@ $$
 
 
 
+\newpage
+# References
+Knofczynski, G. T., & Mundfrom, D. (2007). Sample Sizes When Using Multiple Linear Regression for Prediction. Educational and Psychological Measurement, 68(3), 431-442. doi:10.1177/0013164407310131
+
+
 
 # Appendix
 ## Appendix A: Code
 ```{r Appendix A, eval=FALSE, echo=TRUE}
+# Setup
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
 library(MAAS, warn.conflicts = FALSE, quietly = TRUE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
@@ -619,4 +674,213 @@ banana_tidy <-
     ,value = "Measurement"
     ,-ID
   )
+
+# Sample Size
+rsquare_sim <- c()
+for(i in 1:1000){
+  banana_cor <- 
+    banana_data %>%
+    sample_n(10) %>% 
+    select(
+      Weight
+      ,Radius
+      ,Length
+      # ,Circumference
+    ) %>% 
+    cor()
+  
+  xy_vec <- banana_cor[2:3, 1]
+  C_mat <- banana_cor[2:3, 2:3]
+  
+  rsquare_sim[i] <- t(xy_vec) %*% solve(C_mat) %*% xy_vec
+}
+rsquare_sim %>% 
+  summary() %>% 
+  pander(caption = "Summary Statisitcs for Simulated R-Squared")
+
+# Summary Stats
+banana_summary <-
+  cbind(
+    Statistic = 
+      c(
+        "Min."
+        ,"1st Qu."
+        ,"Median"
+        ,"Mean"
+        ,"3rd Qu."
+        ,"Max"
+      )
+    ,banana_data %>% 
+      select(
+        -c(
+          ID
+          ,Weight_log
+          ,Radius_log
+          ,Length_log
+          ,Circumference_log
+        )
+      ) %>% 
+      map_df(summary)
+  ) %>% 
+  as.tibble()
+kable(banana_summary, caption = "Banana Summary Statisitcs")
+
+
+banana_tidy %>% 
+  ggplot(aes(x = Measurement, colour = Type)) +
+  geom_histogram(
+    aes(y = ..density..)
+    ,alpha = 0
+    ,binwidth = function(x) nclass.FD(x)
+  ) +
+  geom_density() +
+  facet_wrap(
+    ~ Type
+    ,scales = "free"
+  ) +
+  scale_colour_brewer(
+    palette = "Dark2"
+    ,type = "qual"
+  ) +
+  labs(
+    title = "Figure 2: Sample Distributions of Banana Data"
+    ,y = "P(Y=y)"
+  ) +
+  theme(legend.position = "none")
+
+# Visualizations
+banana_data %>% 
+  select(
+    -c(
+      Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
+  gather(
+    key = "Type"
+    ,value = "Measurement"
+    ,-ID
+    ,-Weight
+  ) %>% 
+  ggplot(
+    aes(
+      x = Measurement
+      ,y = Weight
+      ,colour = Type
+    )
+  ) +
+  geom_smooth(
+    method = "loess"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  geom_point() +
+  facet_wrap(
+    ~ Type
+    ,scales = "free_x"
+  ) +
+  scale_colour_brewer(
+    palette = "Set2"
+    ,type = "qual"
+  ) +
+  labs(
+    title = "Figure 3: Weight vs. Predictors"
+    ,y = "Weight (g)"
+  ) +
+  theme(legend.position = "none")
+
+# Reg 01
+banana_reg_01 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log + Radius_log + Circumference_log
+    ,data = .
+  )
+pander(summary(banana_reg_01))
+
+# Cor Plot
+banana_data %>%
+  select(
+    -c(
+      ID
+      ,Weight_log
+      ,Radius_log
+      ,Length_log
+      ,Circumference_log
+    )
+  ) %>% 
+  cor() %>% 
+  as.data.frame() %>%  
+  rownames_to_column() %>% 
+  as.tibble() %>% 
+  gather(
+    key = Column
+    ,value = Correlation
+    ,-rowname
+  ) %>% 
+  rename(Row = rowname) %>% 
+  ggplot(
+    aes(
+      x = Column
+      ,y = Row
+      ,fill = Correlation
+    )
+  ) +
+  geom_raster() +
+  scale_fill_distiller(
+    type = "div"
+    ,palette = "RdBu"
+    ,limits = c(-1, 1)
+  ) +
+  labs(title= "Figure 4: Correlation Plot") +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+    ,axis.title.x = element_blank()
+    ,axis.title.y = element_blank()
+    ,panel.grid = element_blank()
+  )
+
+# Reg 02
+banana_reg_02 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log + Radius_log
+    ,data = .
+  )
+pander(summary(banana_reg_02))
+
+# Reg 03
+banana_reg_03 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Length_log
+    ,data = .
+  )
+pander(summary(banana_reg_03))
+
+# Reg 04
+banana_reg_04 <-
+  banana_data %>% 
+  lm(
+    Weight_log ~ Radius_log
+    ,data = .
+  )
+pander(summary(banana_reg_04))
+
+# ANOVA 01 vs 02
+anova(banana_reg_02, banana_reg_01) %>% 
+  pander(caption = "Analysis of Variance Table: Model 01 vs. Model 02")
+
+# ANOVA 01 vs 02
+anova(banana_reg_03, banana_reg_02) %>% 
+  pander(caption = "Analysis of Variance Table: Model 02 vs. Model 03")
+
+# ANOVA 01 vs 02
+anova(banana_reg_04, banana_reg_02) %>% 
+  pander(caption = "Analysis of Variance Table: Model 02 vs. Model 04")
 ```
