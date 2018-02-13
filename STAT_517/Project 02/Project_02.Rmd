@@ -504,9 +504,6 @@ banana_reg_cv <-
 ```
 
 ```{r CV caret}
-# banana_reg_cv %>% 
-#   pander(caption = "CV Model")
-
 banana_train_control <- trainControl(method = "cv", number = 10)
 banana_caret_cv <- 
   train(
@@ -883,4 +880,162 @@ anova(banana_reg_03, banana_reg_02) %>%
 # ANOVA 01 vs 02
 anova(banana_reg_04, banana_reg_02) %>% 
   pander(caption = "Analysis of Variance Table: Model 02 vs. Model 04")
+
+# Outlier Check
+banana_resid_data <- 
+  tibble(
+    Predicted = predict(banana_reg_02)
+    ,Actual = banana_data$Weight_log
+    ,ID = banana_data$ID
+    ,`Std Residuals` = stdres(banana_reg_02)
+    ,Leverage = hatvalues(banana_reg_02)
+  ) %>% 
+  mutate(Residual = Actual - Predicted)
+
+banana_resid_data %>% 
+  ggplot(aes(x = Predicted, y = `Std Residuals`)) +
+  geom_hline(
+    aes(yintercept = -2)
+    ,linetype = "dashed"
+  ) +
+  geom_hline(
+    aes(yintercept = 2)
+    ,linetype = "dashed"
+  ) +
+  geom_point() +
+  geom_text(
+    data =
+      banana_resid_data %>% 
+      filter(abs(`Std Residuals`) >= 2)
+    ,aes(label = ID)
+    ,nudge_x = 0.005
+  ) +
+  geom_smooth(
+    method = "loess"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  labs(
+    title = "Figure 5: Standardized Residuals vs. Predicted for Model 02"
+    ,x = "Predicted (ln)"
+    ,y = "Standardized Residual (ln)"
+  )
+
+banana_resid_data %>% 
+  ggplot(aes(x = Leverage, y = `Std Residuals`)) +
+  geom_hline(
+    aes(yintercept = -2)
+    ,linetype = "dashed"
+  ) +
+  geom_hline(
+    aes(yintercept = 2)
+    ,linetype = "dashed"
+  ) +
+  geom_point() +
+  geom_text(
+    data =
+      banana_resid_data %>% 
+      filter(abs(`Std Residuals`) >= 2)
+    ,aes(label = ID)
+    ,nudge_x = 0.02
+  ) +
+  geom_smooth(
+    method = "loess"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  labs(
+    title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
+    ,x = "Leverage (ln)"
+    ,y = "Standardized Residual (ln)"
+  )
+
+banana_data %>% 
+  inner_join(
+    banana_resid_data %>% 
+      filter(abs(`Std Residuals`) > 2)
+    ,by = "ID"
+  ) %>% 
+  select(
+    ID
+    ,Weight
+    ,Radius
+    ,Length
+    ,Circumference
+    ,`Std Residuals`
+    ,Leverage
+  ) %>% 
+  kable(caption = "Entries with a |Standardized Residual| >2")
+
+# CV DAAG
+banana_data_post <-
+  banana_data %>% 
+    inner_join(
+    banana_resid_data
+    ,by = "ID"
+  ) %>% 
+  filter(
+    !(abs(`Std Residuals`) > 2 & Leverage > 0.2)
+  ) %>%
+  select(
+    -c(
+      Predicted
+      ,Actual
+      ,`Std Residuals`
+      ,Leverage
+      ,Residual
+    )
+  )
+
+banana_reg_cv <-
+  banana_data_post %>%
+  cv.lm(
+    Weight_log ~ Length_log + Radius_log
+    ,plotit = FALSE
+  )
+
+# CV caret
+banana_train_control <- trainControl(method = "cv", number = 10)
+banana_caret_cv <- 
+  train(
+    Weight_log~.
+    ,data = 
+      banana_data_post %>% 
+      select(Weight_log, Length_log, Radius_log)
+    ,trControl = banana_train_control
+    ,method = "lm"
+  )
+banana_caret_cv %>% 
+  summary() %>% 
+  pander()
+
+# MAE
+mae_log <- 
+  tibble(
+    MSE =
+      (
+        banana_reg_cv %>% 
+          transmute((Weight_log - cvpred)^2) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs(Weight_log - cvpred)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MPAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs((Weight_log - cvpred) / Weight_log)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+  )
+kable(mae_log, caption = "Calculated Error Terms for Log CV Model")
 ```
