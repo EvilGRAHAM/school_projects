@@ -536,7 +536,7 @@ $$
   y_{i} - \hat{y}_{i}
 $$
 
-```{r MAE}
+```{r MAE Log}
 mae_log <- 
   tibble(
     MSE =
@@ -557,7 +557,8 @@ mae_log <-
           transmute(abs((Weight_log - cvpred) / Weight_log)) %>% 
           sum()
       )/(as.numeric(count(banana_reg_cv)))
-  )
+  ) %>% 
+  mutate(RMSE = sqrt(MSE))
 kable(mae_log, caption = "Calculated Error Terms for Log CV Model")
 ```
 
@@ -567,7 +568,7 @@ $$
   e^{y_{i}} - e^{\hat{y}_{i}}
 $$
 
-```{r MAE Log}
+```{r MAE}
 mae_regular <- 
   tibble(
     MSE =
@@ -588,24 +589,28 @@ mae_regular <-
           transmute(abs((Weight - exp(cvpred)) / Weight)) %>% 
           sum()
       )/(as.numeric(count(banana_reg_cv)))
-  )
+  ) %>% 
+  mutate(RMSE = sqrt(MSE))
 kable(mae_regular, caption = "Calculated Error Terms for CV Model")
 ```
 
-
+In both cases the errors are quite small, especially considering the sample size, and lend to the conclusion that the model is an acceptable model.
 
 # Recommendations
 Using the first set of data before the outlier was removed, it can be determined that the best way to predict the weight of a banana is by measuring the radius of the banana. The model that is then used for banana weight prediction is the following:
 $$
-  \ln(W) = \beta_{0} + \beta_{1}\ln(R)
-$$
-$$
-  \ln(W) = 0.3046 + 1.669\ln(R)
+  \ln(W) = 
+  \beta_{0} + \beta_{1}\ln(R) =
+  0.3046 + 1.669\ln(R)
 $$
 
-After the removal of the outlier, the model that was determined to be the best predictor for banana weight was the following:
+After the removal of the outlier, the model that was determined to be the best predictor for banana weight through cross validation was the following:
 $$
-\ln(W) = \beta_{0} + \beta_{1}\ln(R) + \beta_{2}\ln(l)
+  \ln(W) = 
+  \beta_{0} + \beta_{1}\ln(L) + \beta_{2}\ln(R) \implies
+  W =
+  0.00193L^{1.028}R^{1.957} \approx
+  0.000615\pi LR^{2}
 $$
 
 
@@ -1015,7 +1020,7 @@ banana_caret_cv %>%
   summary() %>% 
   pander()
 
-# MAE
+# MAE Log
 mae_log <- 
   tibble(
     MSE =
@@ -1036,6 +1041,32 @@ mae_log <-
           transmute(abs((Weight_log - cvpred) / Weight_log)) %>% 
           sum()
       )/(as.numeric(count(banana_reg_cv)))
-  )
+  ) %>% 
+  mutate(RMSE = sqrt(MSE))
 kable(mae_log, caption = "Calculated Error Terms for Log CV Model")
+
+# MAE
+mae_regular <- 
+  tibble(
+    MSE =
+      (
+        banana_reg_cv %>% 
+          transmute((Weight - exp(cvpred))^2) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs(Weight - exp(cvpred))) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+    ,MPAE =
+      (
+        banana_reg_cv %>% 
+          transmute(abs((Weight - exp(cvpred)) / Weight)) %>% 
+          sum()
+      )/(as.numeric(count(banana_reg_cv)))
+  ) %>% 
+  mutate(RMSE = sqrt(MSE))
+kable(mae_regular, caption = "Calculated Error Terms for CV Model")
 ```
