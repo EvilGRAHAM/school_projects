@@ -1,5 +1,5 @@
 ---
-title: "Does Size Matter? (Estimation of Banana Weight with a Regression Modeling Approach)"
+title: "Estimation of Banana Weight with a Regression Modeling Approach"
 author: "Scott Graham, Kaisa Roggeveen"
 date: "February 13, 2018"
 header-includes:
@@ -610,6 +610,8 @@ $$
   0.00193L^{1.028}R^{1.957} \approx
   0.000615\pi LR^{2}
 $$
+
+As such, we believe this to be the best model for predicting the weight of a banana. It most closely resembles the theoretical model postulated in the Introduction.
 
 
 

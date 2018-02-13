@@ -1,5 +1,5 @@
 ---
-title: "Does Size Matter?"
+title: "Estimation of Banana Weight with a Regression Modeling Approach"
 author: "Scott Graham, Kaisa Roggeveen"
 date: "February 13, 2018"
 output:
@@ -10,7 +10,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
-#  (Estimation of Banana Weight with a Regression Modeling Approach)
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
 library(MASS, warn.conflicts = FALSE, quietly = TRUE)
 library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
@@ -195,6 +194,11 @@ $$
   0.00193L^{1.028}R^{1.957} \approx
   0.000615\pi LR^{2}
 $$
+```{r Reg Output}
+banana_caret_cv %>% 
+  summary() %>% 
+  pander(caption = "", style = "rmarkdown")
+```
 
 ## Cross Validation Error Estimation
 ### Mean Error
