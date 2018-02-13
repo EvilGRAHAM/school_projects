@@ -113,18 +113,16 @@ rsquare_sim %>%
 
 In order to determine the minimum sample size needed, random sample sizes of 10 were generated using radius and length as the predictors. The correlation of the random sample sizes were calculated and a matrix of the correlations were generated. The value of the squared population multiple correlation coefficients with two predictor variables was then calculated and determined to be approximately `r round(mean(rsquare_sim), 4)`. 
 
-![(Knofczynski, 2007)](Images/Sample Size Table.png)
-
-From this the minimum sample size required was then determined from the table from Figure 1, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas (Knofczynski, 2007).
+From this the minimum sample size required was then determined from the table from the table presented in Appendix B, the minimum sample size was determined to be between 15 and 35, therefore the minimum number of bananas required was finalized at 24 bananas (Knofczynski, 2007).
 
 
 # Analysis
 ## Preliminary Analysis
 To begin the analysis the summary statistics of all predictor variables were calculated and recorded in Table 2. The summary statistics were used to highlight the data to obtain a general understanding of the spread for each predictor variable. 
 
-Next graphs of the sampling distributions of the predictor variables were used to visualize the trends of the data in Figure 2. The graphs were examined for skewness and normality where, length appears to be highly skewed to the left, weight appears to be more normally distributed circumference and radius are very similarly distributed with potential bimodal distribution.
+Next graphs of the sampling distributions of the predictor variables were used to visualize the trends of the data in Figure 1. The graphs were examined for skewness and normality where, length appears to be highly skewed to the left, weight appears to be more normally distributed circumference and radius are very similarly distributed with potential bimodal distribution.
 
-In Figure 3, correlation between weight and the predictor variables were produced. From the analysis of the graphs, circumference and radius appear to be much more highly correlated to weight than length.
+In Figure 2, correlation between weight and the predictor variables were produced. From the analysis of the graphs, circumference and radius appear to be much more highly correlated to weight than length.
 
 ```{r Summary Stats}
 banana_summary <-
@@ -171,7 +169,7 @@ banana_tidy %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 2: Sample Distributions of Banana Data"
+    title = "Figure 1: Sample Distributions of Banana Data"
     ,y = "P(Y=y)"
   ) +
   theme(legend.position = "none")
@@ -218,7 +216,7 @@ banana_data %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 3: Weight vs. Predictors"
+    title = "Figure 2: Weight vs. Predictors"
     ,y = "Weight (g)"
   ) +
   theme(legend.position = "none")
@@ -253,7 +251,7 @@ banana_reg_01 <-
 pander(summary(banana_reg_01))
 ```
 
-None of the predictor variables were found to be statistically significant. This is due to the high degree of collinearity exhibited between Radius and Circumference. As such, in the second model, the predictor variable, circumference, was removed. This is because $C=2\pi R$, leading to collinearity. This can also be seen by examining the correlation plot produced by the variables in Figure 4:
+None of the predictor variables were found to be statistically significant. This is due to the high degree of collinearity exhibited between Radius and Circumference. As such, in the second model, the predictor variable, circumference, was removed. This is because $C=2\pi R$, leading to collinearity. This can also be seen by examining the correlation plot produced by the variables in Figure 3:
 ```{r Cor Plot}
 banana_data %>%
   select(
@@ -288,7 +286,7 @@ banana_data %>%
     ,palette = "RdBu"
     ,limits = c(-1, 1)
   ) +
-  labs(title= "Figure 4: Correlation Plot") +
+  labs(title= "Figure 3: Correlation Plot") +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
     ,axis.title.x = element_blank()
@@ -415,7 +413,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 5: Standardized Residuals vs. Predicted for Model 02"
+    title = "Figure 4: Standardized Residuals vs. Predicted for Model 02"
     ,x = "Predicted (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -447,7 +445,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
+    title = "Figure 5: Standardized Residuals vs. Leverage for Model 02"
     ,x = "Leverage (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -745,7 +743,7 @@ banana_tidy %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 2: Sample Distributions of Banana Data"
+    title = "Figure 1: Sample Distributions of Banana Data"
     ,y = "P(Y=y)"
   ) +
   theme(legend.position = "none")
@@ -791,7 +789,7 @@ banana_data %>%
     ,type = "qual"
   ) +
   labs(
-    title = "Figure 3: Weight vs. Predictors"
+    title = "Figure 2: Weight vs. Predictors"
     ,y = "Weight (g)"
   ) +
   theme(legend.position = "none")
@@ -839,7 +837,7 @@ banana_data %>%
     ,palette = "RdBu"
     ,limits = c(-1, 1)
   ) +
-  labs(title= "Figure 4: Correlation Plot") +
+  labs(title= "Figure 3: Correlation Plot") +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
     ,axis.title.x = element_blank()
@@ -924,7 +922,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 5: Standardized Residuals vs. Predicted for Model 02"
+    title = "Figure 4: Standardized Residuals vs. Predicted for Model 02"
     ,x = "Predicted (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -956,7 +954,7 @@ banana_resid_data %>%
     ,se = FALSE
   ) +
   labs(
-    title = "Figure 6: Standardized Residuals vs. Leverage for Model 02"
+    title = "Figure 5: Standardized Residuals vs. Leverage for Model 02"
     ,x = "Leverage (ln)"
     ,y = "Standardized Residual (ln)"
   )
@@ -1070,3 +1068,7 @@ mae_regular <-
   mutate(RMSE = sqrt(MSE))
 kable(mae_regular, caption = "Calculated Error Terms for CV Model")
 ```
+
+
+## Appendix B: Sample Size Table
+![](Images/Sample Size Table.png){ width=75% height=75% }
