@@ -5,7 +5,7 @@ library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 
 
 # Data Import ----------
-panss_old <- read_csv(file = "data/Panssdata_test.csv")
+panss_old <- read_csv(file = "../data/Panssdata_test.csv")
 
 
 #Server ----------
