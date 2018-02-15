@@ -520,7 +520,7 @@ banana_caret_cv %>%
 This gives the model:
 $$
   W =
-  e^{-0.6249}L^{1.028}R^{1.957} =
+  e^{-6.249}L^{1.028}R^{1.957} =
   0.00193L^{1.028}R^{1.957} \implies
   D = \frac{0.00193}{\pi} =
   0.000615g/cm

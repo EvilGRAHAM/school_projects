@@ -55,5 +55,67 @@ panss_results <-
     ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
   )
 
-tibble(`P Pass` = FALSE, `N Pass` = FALSE, `G Pass` = FALSE) %>% 
-  mutate(Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE))
+panss_results %>% 
+  select(
+    -c(
+      P
+      ,N
+      ,G
+    )
+  ) %>% 
+  filter_if()
+  gather(
+    key = "Test"
+    ,value = "Result"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      # ,y = Result
+      ,colour = Result
+      ,fill = Result
+    )
+  ) +
+  geom_bar(position = "fill") +
+  facet_wrap(
+    ~ Test
+    ,scales = "fixed"
+  )
+
+panss_passes_logit <- 
+  panss_results %>% 
+  glm(
+    Passes ~ LANG
+    ,data = .
+    ,family = binomial
+  )
+summary(panss_passes_logit)
+
+panss_P_logit <- 
+  panss_results %>% 
+  glm(
+    `P Pass` ~ LANG
+    ,data = .
+    ,family = binomial
+  )
+summary(panss_P_logit)
+
+panss_N_logit <- 
+  panss_results %>% 
+  glm(
+    `N Pass` ~ LANG
+    ,data = .
+    ,family = binomial
+  )
+summary(panss_N_logit)
+
+panss_G_logit <- 
+  panss_results %>% 
+  glm(
+    `G Pass` ~ LANG
+    ,data = .
+    ,family = binomial
+  )
+summary(panss_G_logit)
