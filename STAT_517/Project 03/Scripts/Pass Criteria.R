@@ -1,9 +1,26 @@
 # Libraries ----------
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+  )
 
 # Data Import ----------
-panss <- read_csv(file = "../Shiny/data/Panssdata_Modified.csv")
+panss <- 
+  "../Shiny/data/Panssdata_Modified.csv" %>% 
+  read_csv() %>% 
+  filter_all(all_vars(!is.na(.)))
 
 panss_rater <- 
   panss %>% 
@@ -63,7 +80,6 @@ panss_results %>%
       ,G
     )
   ) %>% 
-  filter_if()
   gather(
     key = "Test"
     ,value = "Result"
@@ -82,6 +98,14 @@ panss_results %>%
   facet_wrap(
     ~ Test
     ,scales = "fixed"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
   )
 
 panss_passes_logit <- 
