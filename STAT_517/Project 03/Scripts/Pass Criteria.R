@@ -20,8 +20,25 @@ theme_minimal2 <-
 panss <- 
   "../Shiny/data/Panssdata_Modified.csv" %>% 
   read_csv() %>% 
-  filter_all(all_vars(!is.na(.)))
+  filter_all(all_vars(!is.na(.))) %>% 
+  mutate(
+    LANG = if_else(LANG == "E", "English", LANG)
+    ,LANG = if_else(LANG == "F", "French", LANG)
+    ,LANG = if_else(LANG == "I", "Italian", LANG)
+  ) %>% 
+  rename(
+    G01 = G1
+    ,G02 = G2
+    ,G03 = G3
+    ,G04 = G4
+    ,G05 = G5
+    ,G06 = G6
+    ,G07 = G7
+    ,G08 = G8
+    ,G09 = G9
+  )
 
+# Data Cleaning ----------
 panss_rater <- 
   panss %>% 
   filter(RATER == 0)
@@ -63,7 +80,7 @@ panss_results <-
       ,LANG = LANG
       ,P = P1 + P2 + P3 + P4 + P5 + P6 + P7
       ,N = N1 + N2 + N3 + N4 + N5 + N6 + N7
-      ,G = G1 + G2 + G3 + G4 + G5 + G6 + G7 + G8 + G9 + G10 + G11 + G12 + G13 + G14 + G15 + G16
+      ,G = G01 + G02 + G03 + G04 + G05 + G06 + G07 + G08 + G09 + G10 + G11 + G12 + G13 + G14 + G15 + G16
     ) %>% 
   mutate(
     `P Pass` = if_else(P >= 5, TRUE, FALSE)
@@ -71,6 +88,400 @@ panss_results <-
     ,`G Pass` = if_else(G >= 10, TRUE, FALSE)
     ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
   )
+
+# Data Visualization ----------
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("P")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Positive Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("N")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Negative Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("G")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Generic Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("P")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = Question
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  geom_point(
+    data = 
+      panss_rater %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with("P")
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      )
+  ) +
+  labs(title = "Violin Plot of Positive Ratings")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("P")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  # geom_line(
+  #   data = 
+  #     rbind(
+  #       panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("P")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         )
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("P")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% 
+  #         mutate(LANG = "French")
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("P")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% mutate(LANG = "Italian")
+  #     )
+  #   ,aes(group = Question)
+  #   ,linetype = "dashed"
+  # ) +
+  # facet_wrap(~ Question) +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_x"
+  ) +
+  theme(
+    axis.text.x = element_blank()
+    ,axis.title.x = element_blank()
+  ) +
+  labs(title = "Violin Plot of Positive Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("N")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = Question
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  geom_point(
+    data = 
+      panss_rater %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with("N")
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      )
+  ) +
+  labs(title = "Violin Plot of Negative Ratings")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("N")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  # geom_line(
+  #   data = 
+  #     rbind(
+  #       panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("N")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         )
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("N")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% 
+  #         mutate(LANG = "French")
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("N")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% mutate(LANG = "Italian")
+  #     )
+  #   ,aes(group = Question)
+  #   ,linetype = "dashed"
+  # ) +
+  # facet_wrap(~ Question) +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_x"
+  ) +
+  theme(
+    axis.text.x = element_blank()
+    ,axis.title.x = element_blank()
+  ) +
+  labs(title = "Violin Plot of Negative Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("G")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = Question
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  geom_point(
+    data = 
+      panss_rater %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with("G")
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      )
+  ) +
+  labs(title = "Violin Plot of Generic Ratings")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("G")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,y = Rating
+    )
+  ) +
+  geom_violin() +
+  # geom_line(
+  #   data = 
+  #     rbind(
+  #       panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("G")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         )
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("G")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% 
+  #         mutate(LANG = "French")
+  #       ,panss_rater %>% 
+  #         select(
+  #           RATER
+  #           ,LANG
+  #           ,starts_with("G")
+  #         ) %>% 
+  #         gather(
+  #           key = "Question"
+  #           ,value = "Rating"
+  #           ,-RATER
+  #           ,-LANG
+  #         ) %>% mutate(LANG = "Italian")
+  #     )
+  #   ,aes(group = Question)
+  #   ,linetype = "dashed"
+  # ) +
+  # facet_wrap(~ Question) +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_x"
+  ) +
+  theme(
+    axis.text.x = element_blank()
+    ,axis.title.x = element_blank()
+  ) +
+  labs(title = "Violin Plot of Generic Ratings by Language")
 
 panss_results %>% 
   select(
@@ -89,7 +500,6 @@ panss_results %>%
   ggplot(
     aes(
       x = LANG
-      # ,y = Result
       ,colour = Result
       ,fill = Result
     )
@@ -106,8 +516,10 @@ panss_results %>%
   scale_colour_brewer(
     type = "qual"
     ,palette = "Set2"
-  )
+  ) +
+  labs(title = "Proportion of Raters who Passed by Language")
 
+# Regression Models ----------
 panss_passes_logit <- 
   panss_results %>% 
   glm(
