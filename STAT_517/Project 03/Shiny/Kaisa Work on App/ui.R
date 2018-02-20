@@ -19,13 +19,14 @@ ui <- fluidPage(
   #*Output() function
     #Individual Results are Created
       #Plots
-      plotOutput("hist")
+      
       #Texts of PASS/FAIL
         
 )
 
 #Server
 server <- function(input, output){}
+
 
 
 #App
