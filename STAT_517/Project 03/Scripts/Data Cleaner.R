@@ -4,7 +4,8 @@ library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 
 # Data Import ----------
 panss <- read_delim(file = "../Shiny/data/Panssdata.txt", delim = " ")
-# panss <- read_csv(file = "../Shiny/data/Panssdata_Modified.csv")
+#panss <- read_csv(file = "../Shiny/data/Panssdata_Modified.csv")
+
 
 
 # Data Cleaning ----------
@@ -73,3 +74,4 @@ panss <-
 
 # Data Export ----------
 write_csv(x = panss, path = "../Shiny/data/Panssdata_Modified.csv")
+
