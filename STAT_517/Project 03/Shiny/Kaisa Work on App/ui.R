@@ -84,14 +84,15 @@ ui <- fluidPage(
   titlePanel("Results of PANSS Testing"),
   
     #Inputs
-      selectInput("plots","Results", choices = c("Histogram of Positive Ratings by Language","Histogram of Negative Ratings by Language","Histogram of Generic Ratings by Language")),
-      #actionButton(),
+      selectInput("hist","Results-Histograms", choices = c("Histogram of Positive Ratings by Language","Histogram of Negative Ratings by Language","Histogram of Generic Ratings by Language")),
+      selectInput("violin","Results-Violin Plots",choices = c("Violin Plots of Positive Ratings","Violin Plot of Positive Ratings by Language","Violin Plot of Negative Ratings","Violin Plot of Negative Ratings by Language","Violin Plot of Generic Ratings","Violin Plot of Generic Ratings by Language")),
+      selectInput("results","Results-Proportions Passed", choices = c("Proportions passed by Languages")),
       numericInput("inputid","Enter your Rater ID", 0, min = 0, max = 81, step = 1),
-      #checkboxGroupInput()
-      #fileInput()
-    
-    #Outputs
-      plotOutput("hist")
+   
+     #Outputs
+      plotOutput("hist"),
+      plotOutput("violin"),
+      plotOutput("prop")
       #textOutput()
   
 
@@ -100,7 +101,7 @@ ui <- fluidPage(
 #Server
 server <- function(input, output){
   output$hist <- renderPlot({ 
-    if(input$plots == "Histogram of Positive Ratings by Language")
+    if(input$hist == "Histogram of Positive Ratings by Language")
     {output$hist_PRL <- renderPlot({panss_tests %>% 
         select(
           RATER
@@ -123,7 +124,7 @@ server <- function(input, output){
         labs(title = "Histogram of Positive Ratings by Language")})
     }
     
-    else if(input$plots == "Histogram of Negative Ratings by Language")
+    else if(input$hist == "Histogram of Negative Ratings by Language")
     {panss_tests %>% 
         select(
           RATER
@@ -145,7 +146,7 @@ server <- function(input, output){
         scale_x_discrete(limit = 1:7) +
         labs(title = "Histogram of Negative Ratings by Language")}
     
-    else if(input$plots == "Histogram of Generic Rating by Language")
+    else if(input$hist == "Histogram of Generic Rating by Language")
     {panss_tests %>% 
         select(
           RATER
@@ -167,6 +168,229 @@ server <- function(input, output){
         scale_x_discrete(limit = 1:7) +
         labs(title = "Histogram of Generic Ratings by Language")}
   })
+  
+  output$violin <- renderPlot({ 
+    if(input$violin == "Violin of Positive Ratings by Language")
+    {output$hist_PRL <- renderPlot({
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("P")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = Question
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+        geom_point(
+          data = 
+            panss_rater %>% 
+            select(
+              RATER
+              ,LANG
+              ,starts_with("P")
+            ) %>% 
+            gather(
+              key = "Question"
+              ,value = "Rating"
+              ,-RATER
+              ,-LANG
+            )
+        ) +
+        labs(title = "Violin Plot of Positive Ratings")
+    })}
+    
+    else if(input$violin == "Violin of Positive Ratings by Language")
+    {output$violin <-renderPlot({
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("P")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = LANG
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+      facet_grid(
+        LANG ~ Question
+        ,scales = "free_x"
+      ) +
+        theme(
+          axis.text.x = element_blank()
+          ,axis.title.x = element_blank()
+        ) +
+        labs(title = "Violin Plot of Positive Ratings by Language")
+    })}
+  
+    else if(input$violin == "Violin of Negative Ratings")
+    {output$violin <-renderPlot({
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("N")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = Question
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+        geom_point(
+          data = 
+            panss_rater %>% 
+            select(
+              RATER
+              ,LANG
+              ,starts_with("N")
+            ) %>% 
+            gather(
+              key = "Question"
+              ,value = "Rating"
+              ,-RATER
+              ,-LANG
+            )
+        ) +
+        labs(title = "Violin Plot of Negative Ratings")
+    })}
+    
+    else if(input$violin == "Violin of Negative Ratings by Language")
+    {output$violin <-renderPlot({
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("N")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = LANG
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+      facet_grid(
+        LANG ~ Question
+        ,scales = "free_x"
+      ) +
+        theme(
+          axis.text.x = element_blank()
+          ,axis.title.x = element_blank()
+        ) +
+        labs(title = "Violin Plot of Negative Ratings by Language")
+      
+    })}
+    
+    else if(input$violin == "Violin of Generic Ratings")
+    {output$violin <-renderPlot({
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("G")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = Question
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+        geom_point(
+          data = 
+            panss_rater %>% 
+            select(
+              RATER
+              ,LANG
+              ,starts_with("G")
+            ) %>% 
+            gather(
+              key = "Question"
+              ,value = "Rating"
+              ,-RATER
+              ,-LANG
+            )
+        ) +
+        labs(title = "Violin Plot of Generic Ratings")
+    })}
+    
+    else if(input$violin == "Violin of Generic Ratings by Language")
+    {output$violin <-renderPlot({
+      
+      panss_tests %>% 
+        select(
+          RATER
+          ,LANG
+          ,starts_with("G")
+        ) %>% 
+        gather(
+          key = "Question"
+          ,value = "Rating"
+          ,-RATER
+          ,-LANG
+        ) %>% 
+        ggplot(
+          aes(
+            x = LANG
+            ,y = Rating
+          )
+        ) +
+        geom_violin() +
+      facet_grid(
+        LANG ~ Question
+        ,scales = "free_x"
+      ) +
+        theme(
+          axis.text.x = element_blank()
+          ,axis.title.x = element_blank()
+        ) +
+        labs(title = "Violin Plot of Generic Ratings by Language")
+    })}
+    
+    })
+
+  output$prop <- renderPlot({ 
+    if(input$results == "Proportions Passed by Language ")
+    {output$prop <- renderPlot({})}})
+  
   }
 
 #App
