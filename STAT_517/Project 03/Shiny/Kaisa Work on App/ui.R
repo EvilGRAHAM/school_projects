@@ -13,13 +13,13 @@ ui <- fluidPage(
     
     #Numeric Input (Individual id)
       numericInput("IdInput","Enter your Rater ID", 0, min = 0, max = 81, step = 1),
-    #From the number entered, I want to read from the csv file the info and create the graphs to determine if they passed or not
-      clean_panss <- read_csv(file = "../Shiny/data/Panssdata_Modified.csv"),
-      clean_panss
+    #Importing File for Evaluation
+      fileInput("panssfile","Select the Cleaned PANSS File from your desktop", buttonLabel = "Choose File"),
+      #clean_panss <- read_csv(file = "../Shiny/data/Panssdata_Modified.csv"),
   #*Output() function
     #Individual Results are Created
       #Plots
-        
+      plotOutput("hist")
       #Texts of PASS/FAIL
         
 )
