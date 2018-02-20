@@ -1,0 +1,29 @@
+---
+title: "Data Analysis System Develop for physicians completing PANSS testing and the effect language has on the score"
+author: "Kaisa Roggeveen","Scott Graham"
+date: "Febuary 26th 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Summary
+
+# Introduction
+
+# Data Collection Protocol
+
+# Data Analysis System
+
+# Data Analysis
+
+## Including Plots
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+# Conclusions
+
+# Recommendations

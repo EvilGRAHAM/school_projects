@@ -84,19 +84,25 @@ ui <- fluidPage(
   titlePanel("Results of PANSS Testing"),
   
     #Inputs
+
+ 
+  sidebarPanel(
       selectInput("hist","Results-Histograms", choices = c("Histogram of Positive Ratings by Language","Histogram of Negative Ratings by Language","Histogram of Generic Ratings by Language")),
       selectInput("violin","Results-Violin Plots",choices = c("Violin Plots of Positive Ratings","Violin Plot of Positive Ratings by Language","Violin Plot of Negative Ratings","Violin Plot of Negative Ratings by Language","Violin Plot of Generic Ratings","Violin Plot of Generic Ratings by Language")),
       selectInput("results","Results-Proportions Passed", choices = c("Proportions passed by Languages")),
-      numericInput("inputid","Enter your Rater ID", 0, min = 0, max = 81, step = 1),
-   
+      numericInput("inputid","Enter your Rater ID", 0, min = 0, max = 81, step = 1)
+  ), 
+  
+
+  mainPanel(
      #Outputs
       plotOutput("hist"),
       plotOutput("violin"),
       plotOutput("prop")
       #textOutput()
-  
+  )
+    )
 
-)
 
 #Server
 server <- function(input, output){
