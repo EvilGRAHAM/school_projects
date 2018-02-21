@@ -1,8 +1,21 @@
 ---
 title: "Data Analysis System Develop for physicians completing PANSS testing and the effect language has on the score"
-author: "Kaisa Roggeveen","Scott Graham"
-date: "Febuary 26th 2018"
-output: html_document
+author: "Kaisa Roggeveen, Scott Graham"
+date: "Febuary 27th 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+  - \newcommand{\lnit}{{\operatorname{Logit}}}
+output: 
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -12,6 +25,9 @@ knitr::opts_chunk$set(echo = TRUE)
 # Summary
 
 # Introduction
+What is the problem?
+-The company wants to have a system for testing the PANSS data, and they want the evaluation to be done within half an hour of the assesment of the physicians and the physicians want to know how they did on the assesment. We are also testing whether language affects if a physician passed the test. 
+
 
 # Data Collection Protocol
 
