@@ -23,10 +23,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Summary
+This report focuses on the development and implementation of a data collection system and data analysis system 
+
 
 # Introduction
 What is the problem?
 -The company wants to have a system for testing the PANSS data, and they want the evaluation to be done within half an hour of the assesment of the physicians and the physicians want to know how they did on the assesment. We are also testing whether language affects if a physician passed the test. 
+
+What is the objective?
+The objective of this study is to create a system to analysis the data quickly from the PANSS testing. The app will tell the physician whether or not they passed based the PANSS test and overall results of the effect of language and the physicians passing. 
 
 
 # Data Collection Protocol
