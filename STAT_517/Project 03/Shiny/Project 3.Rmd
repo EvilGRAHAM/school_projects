@@ -35,6 +35,8 @@ The objective of this study is to create a system to analysis the data quickly f
 
 
 # Data Collection Protocol
+To collect the data an App was developed using the Shiny Package in R. 
+
 
 # Data Analysis System
 
