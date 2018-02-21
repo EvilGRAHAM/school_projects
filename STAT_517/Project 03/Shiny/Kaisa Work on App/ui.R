@@ -14,7 +14,7 @@ fluidPage(
     
     # Inputs ----------
     column(
-      width = 3
+      width = 4
       ,offset = 0
       ,wellPanel(
         selectizeInput(
@@ -32,14 +32,14 @@ fluidPage(
           ,"Facet by Language"
           ,value = FALSE
         )
-        ,selectizeInput(
-          inputId = "results"
-          ,label = "Results-Proportions Passed"
-          ,choices = 
-            c(
-              "Proportions passed by Languages"
-            )
-        )
+        # ,selectizeInput(
+        #   inputId = "results"
+        #   ,label = "Results-Proportions Passed"
+        #   ,choices = 
+        #     c(
+        #       "Proportions passed by Languages"
+        #     )
+        # )
         ,numericInput(
           inputId = "rater_num"
           ,label = "Enter your Rater ID"
@@ -49,16 +49,16 @@ fluidPage(
           ,step = 1
         )
       )
+      ,verbatimTextOutput("logit")
     )
-    
+
     # Plots ---------
     ,column(
-      width = 9
+      width = 8
       ,offset = 0
       ,plotOutput("hist")
       ,plotOutput("violin")
       ,plotOutput("prop")
-      #textOutput()
     )
   )
 )

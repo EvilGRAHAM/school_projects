@@ -136,9 +136,37 @@ function(input, output){
           ,value = "Rating"
           ,-RATER
           ,-LANG
-        ) %>%
-        ggplot(aes(x = Rating)) +
+        ) %>% 
+        left_join(
+          panss_rater_all_lang %>% 
+            filter(str_detect(string = Question, pattern = "P")) %>% 
+            select(-RATER)
+          ,by = c("Question", "LANG")
+          ,suffix = c("", " Expert")
+        ) %>% 
+        mutate(
+          LB = `Rating Expert` - 1
+          ,UB = `Rating Expert` + 1
+          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
+        ) %>% 
+        ggplot(
+          aes(
+            x = Rating
+            ,fill = Pass
+            ,colour = Pass
+          )
+        ) +
         geom_bar() +
+        scale_fill_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
+        scale_colour_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
         scale_x_discrete(limit = 1:7) +
         labs(title = "Histogram of Positive Ratings") +
         if(input$by_lang){
@@ -165,8 +193,36 @@ function(input, output){
           ,-RATER
           ,-LANG
         ) %>% 
-        ggplot(aes(x = Rating)) +
+        left_join(
+          panss_rater_all_lang %>% 
+            filter(str_detect(string = Question, pattern = "N")) %>% 
+            select(-RATER)
+          ,by = c("Question", "LANG")
+          ,suffix = c("", " Expert")
+        ) %>% 
+        mutate(
+          LB = `Rating Expert` - 1
+          ,UB = `Rating Expert` + 1
+          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
+        ) %>% 
+        ggplot(
+          aes(
+            x = Rating
+            ,fill = Pass
+            ,colour = Pass
+          )
+        ) +
         geom_bar() +
+        scale_fill_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
+        scale_colour_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
         scale_x_discrete(limit = 1:7) +
         labs(title = "Histogram of Negative Ratings") +
         if(input$by_lang){
@@ -193,8 +249,36 @@ function(input, output){
           ,-RATER
           ,-LANG
         ) %>% 
-        ggplot(aes(x = Rating)) +
+        left_join(
+          panss_rater_all_lang %>% 
+            filter(str_detect(string = Question, pattern = "G")) %>% 
+            select(-RATER)
+          ,by = c("Question", "LANG")
+          ,suffix = c("", " Expert")
+        ) %>% 
+        mutate(
+          LB = `Rating Expert` - 1
+          ,UB = `Rating Expert` + 1
+          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
+        ) %>% 
+        ggplot(
+          aes(
+            x = Rating
+            ,fill = Pass
+            ,colour = Pass
+          )
+        ) +
         geom_bar() +
+        scale_fill_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
+        scale_colour_brewer(
+          type = "qual"
+          ,palette = "Set2"
+          ,direction = -1
+        ) +
         scale_x_discrete(limit = 1:7) +
         labs(title = "Histogram of Generic Ratings") +
         if(input$by_lang){
@@ -401,5 +485,26 @@ function(input, output){
       labs(title = "Proportion of Raters who Passed by Language")
   })
   
-  
+  # Logit Regression ----------
+  output$logit <- renderPrint({
+    panss_results %>% 
+      select(
+        LANG
+        ,contains("Pass")
+      ) %>% 
+      gather(
+        key = Set
+        ,value = Result
+        ,-LANG
+      ) %>% 
+      split(.$Set) %>% 
+      map(
+        ~ glm(
+          Result ~ LANG
+          ,data = .
+          ,family = binomial
+        )
+      ) %>% 
+      map(summary)
+  })
 }
