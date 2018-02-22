@@ -93,22 +93,22 @@ panss_results <-
     ,G = G01 + G02 + G03 + G04 + G05 + G06 + G07 + G08 + G09 + G10 + G11 + G12 + G13 + G14 + G15 + G16
   ) %>% 
   mutate(
-    `P Pass` = if_else(P >= 5, TRUE, FALSE)
-    ,`N Pass` = if_else(N >= 5, TRUE, FALSE)
-    ,`G Pass` = if_else(G >= 10, TRUE, FALSE)
-    ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
+    `P Pass` = if_else(P >= 5, "Pass", "Fail") %>% as.factor()
+    ,`N Pass` = if_else(N >= 5, "Pass", "Fail") %>% as.factor()
+    ,`G Pass` = if_else(G >= 10, "Pass", "Fail") %>% as.factor()
+    ,Passes = if_else(`P Pass` == "Pass" & `N Pass` == "Pass" & `G Pass` == "Pass", "Pass", "Fail") %>% as.factor()
   )
 
 panss_rater_all_lang <- 
-  rbind(
+  panss_rater %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  union(
     panss_rater %>% 
-      gather(
-        key = "Question"
-        ,value = "Rating"
-        ,-RATER
-        ,-LANG
-      )
-    ,panss_rater %>% 
       gather(
         key = "Question"
         ,value = "Rating"
@@ -116,7 +116,9 @@ panss_rater_all_lang <-
         ,-LANG
       ) %>% 
       mutate(LANG = "French")
-    ,panss_rater %>% 
+  ) %>% 
+  union(
+    panss_rater %>% 
       gather(
         key = "Question"
         ,value = "Rating"
@@ -131,62 +133,72 @@ function(input, output){
   
   # Histogram ---------
   output$hist <- renderPlot({ 
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with(input$question_set)
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        left_join(
-          panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = input$question_set)) %>% 
-            select(-RATER)
-          ,by = c("Question", "LANG")
-          ,suffix = c("", " Expert")
-        ) %>% 
-        mutate(
-          LB = `Rating Expert` - 1
-          ,UB = `Rating Expert` + 1
-          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
-        ) %>% 
-        ggplot(
-          aes(
-            x = Rating
-            ,fill = Pass
-            ,colour = Pass
-          )
-        ) +
-        geom_bar() +
-        scale_fill_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_colour_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_x_discrete(limit = 1:7) +
-        labs(title = paste("Histogram of", question_cats[[input$question_set]], "Ratings")) +
-        theme(legend.position = "bottom") +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_y"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "fixed"
-          )
-        }
+    panss_tests %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with(input$question_set)
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      left_join(
+        panss_rater_all_lang %>% 
+          filter(str_detect(string = Question, pattern = input$question_set)) %>% 
+          select(-RATER)
+        ,by = c("Question", "LANG")
+        ,suffix = c("", " Expert")
+      ) %>% 
+      mutate_if(
+        .predicate = is.character
+        ,.funs = as.factor
+      ) %>% 
+      mutate(
+        LB = `Rating Expert` - 1
+        ,UB = `Rating Expert` + 1
+        ,Pass = if_else(Rating >= LB & Rating <= UB, "Pass", "Fail") %>% as.factor()
+      ) %>% 
+      ggplot(
+        aes(
+          x = Rating
+          ,fill = Pass
+          ,colour = Pass
+        )
+      ) +
+      geom_bar() +
+      scale_fill_brewer(
+        type = "qual"
+        ,palette = "Set2"
+        ,direction = -1
+      ) +
+      scale_colour_brewer(
+        type = "qual"
+        ,palette = "Set2"
+        ,direction = -1
+      ) +
+      scale_x_discrete(limit = 1:7) +
+      labs(
+        title = paste("Histogram of", question_cats[[input$question_set]], "Ratings")
+        ,x = "Rating"
+        ,y = "Count"
+        ,fill = "Result"
+        ,colour = "Result"
+      ) +
+      theme(legend.position = "bottom") +
+      if(input$by_lang){
+        facet_grid(
+          LANG ~ Question
+          ,scales = "free_y"
+        )
+      } else{
+        facet_grid(
+          ~ Question
+          ,scales = "fixed"
+        )
+      }
   })
   
   # Violin Plot ---------
@@ -203,6 +215,10 @@ function(input, output){
         ,-RATER
         ,-LANG
       ) %>% 
+      mutate_if(
+        .predicate = is.character
+        ,.funs = as.factor
+      ) %>% 
       ggplot(
         aes(
           x = Question
@@ -210,18 +226,30 @@ function(input, output){
         )
       ) +
       geom_violin() +
+      geom_errorbar(
+        data = panss_rater_all_lang %>% 
+          filter(str_detect(string = Question, pattern = input$question_set))
+        ,aes(
+          ymin = Rating - 1
+          ,ymax = Rating + 1
+        )
+        ,width = 0.25
+      ) +
       geom_point(
         data = panss_rater_all_lang %>% 
           filter(str_detect(string = Question, pattern = input$question_set))
         ,aes(shape = as.factor(RATER))
       ) +
-      labs(title = paste("Violin Plot of", question_cats[[input$question_set]], "Ratings")) +
       scale_shape_manual(
         values = 8
         ,name = element_blank()
         ,labels = "Expert's Rating"
       ) +
       scale_y_discrete(limit = 1:7) +
+      labs(
+        title = paste("Violin Plot of", question_cats[[input$question_set]], "Ratings")
+        ,y = "Rating"
+      ) +
       theme(
         axis.text.x = element_blank()
         ,axis.title.x = element_blank()
@@ -237,7 +265,7 @@ function(input, output){
           ~ Question
           ,scales = "free_x"
         )
-        }
+      }
   })
   
   # Proportion Plot ----------
@@ -255,6 +283,10 @@ function(input, output){
         ,value = "Result"
         ,-RATER
         ,-LANG
+      ) %>% 
+      mutate_if(
+        .predicate = is.character
+        ,.funs = as.factor
       ) %>% 
       ggplot(
         aes(
@@ -278,7 +310,13 @@ function(input, output){
         ,palette = "Set2"
         ,direction = -1
       ) +
-      labs(title = "Proportion of Raters who Passed by Language") +
+      labs(
+        title = "Proportion of Raters who Passed by Language"
+        ,x = "Language"
+        ,y = "Proportion"
+        ,fill = "Result"
+        ,colour = "Result"
+      ) +
       theme(legend.position = "bottom")
   })
   
@@ -294,6 +332,7 @@ function(input, output){
         ,value = Result
         ,-LANG
       ) %>% 
+      mutate_all(as.factor) %>% 
       split(.$Set) %>% 
       map(
         ~ glm(
@@ -330,7 +369,7 @@ function(input, output){
       mutate(
         LB = `Rating Expert` - 1
         ,UB = `Rating Expert` + 1
-        ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
+        ,Pass = if_else(Rating >= LB & Rating <= UB, "Pass", "Fail") %>% as.factor()
       ) %>% 
       select(
         RATER = RATER
