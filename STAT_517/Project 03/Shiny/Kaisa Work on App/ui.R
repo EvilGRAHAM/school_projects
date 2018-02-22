@@ -49,7 +49,7 @@ db_body <- dashboardBody(
       ,box(
         title = "Results"
         ,width = NULL
-        ,dataTableOutput("results")
+        ,tableOutput("results")
       )
     )
   )
@@ -66,6 +66,11 @@ db_body <- dashboardBody(
         ,width = NULL
         ,plotOutput("prop")
       )
+      ,box(
+        title = "Logistic Regression Coefficients"
+        ,width = NULL
+        ,tableOutput("logit_coefficients")
+      )
     )
     ,column(
       width = 6
@@ -75,9 +80,9 @@ db_body <- dashboardBody(
         ,plotOutput("violin")
       )
       ,box(
-        title = "Logistic Regression"
+        title = "Logistic Regression Summary"
         ,width = NULL
-        ,verbatimTextOutput("logit")
+        ,verbatimTextOutput("logit_summary")
       )
     )
   )

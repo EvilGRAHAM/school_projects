@@ -321,7 +321,7 @@ function(input, output){
   })
   
   # Logit Regression ----------
-  output$logit <- renderPrint({
+  panss_logit <- reactive({
     panss_results %>% 
       select(
         LANG
@@ -340,12 +340,25 @@ function(input, output){
           ,data = .
           ,family = binomial
         )
-      ) %>% 
-      map(summary)
+      )
+  })
+  
+  # Summary ----------
+  output$logit_summary <- renderPrint({
+    map(panss_logit(), summary)
+  })
+  
+  # Coefficients ----------
+  output$logit_coefficients <- renderTable({
+    cbind(
+      Variable = names(glm(Passes ~ LANG, data = panss_results, family = binomial)$coef)
+      ,map_df(panss_logit(), coefficients)
+    ) %>% 
+      as.tibble()
   })
   
   # Rater Results ----------
-  output$results <- renderDataTable({
+  output$results <- renderTable({
     panss_tests %>% 
       select(
         RATER
