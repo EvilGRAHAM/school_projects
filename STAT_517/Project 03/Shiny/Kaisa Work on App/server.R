@@ -42,6 +42,13 @@ panss <- "../Results App/Panssdata_Modified.csv" %>%
   )
 
 # Data Cleaning ----------
+question_cats <- 
+  c(
+    "P" = "Positive"
+    ,"N" = "Negative"
+    ,"G" = "Generic"
+  )
+
 panss_rater <- 
   panss %>% 
   filter(RATER == 0)
@@ -124,12 +131,11 @@ function(input, output){
   
   # Histogram ---------
   output$hist <- renderPlot({ 
-    if(input$question_set == "P"){
       panss_tests %>% 
         select(
           RATER
           ,LANG
-          ,starts_with("P")
+          ,starts_with(input$question_set)
         ) %>% 
         gather(
           key = "Question"
@@ -139,7 +145,7 @@ function(input, output){
         ) %>% 
         left_join(
           panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "P")) %>% 
+            filter(str_detect(string = Question, pattern = input$question_set)) %>% 
             select(-RATER)
           ,by = c("Question", "LANG")
           ,suffix = c("", " Expert")
@@ -168,7 +174,8 @@ function(input, output){
           ,direction = -1
         ) +
         scale_x_discrete(limit = 1:7) +
-        labs(title = "Histogram of Positive Ratings") +
+        labs(title = paste("Histogram of", question_cats[[input$question_set]], "Ratings")) +
+        theme(legend.position = "bottom") +
         if(input$by_lang){
           facet_grid(
             LANG ~ Question
@@ -180,268 +187,57 @@ function(input, output){
             ,scales = "fixed"
           )
         }
-    } else if(input$question_set == "N"){
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with("N")
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        left_join(
-          panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "N")) %>% 
-            select(-RATER)
-          ,by = c("Question", "LANG")
-          ,suffix = c("", " Expert")
-        ) %>% 
-        mutate(
-          LB = `Rating Expert` - 1
-          ,UB = `Rating Expert` + 1
-          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
-        ) %>% 
-        ggplot(
-          aes(
-            x = Rating
-            ,fill = Pass
-            ,colour = Pass
-          )
-        ) +
-        geom_bar() +
-        scale_fill_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_colour_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_x_discrete(limit = 1:7) +
-        labs(title = "Histogram of Negative Ratings") +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_y"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "fixed"
-          )
-        }
-    } else{
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with("G")
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        left_join(
-          panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "G")) %>% 
-            select(-RATER)
-          ,by = c("Question", "LANG")
-          ,suffix = c("", " Expert")
-        ) %>% 
-        mutate(
-          LB = `Rating Expert` - 1
-          ,UB = `Rating Expert` + 1
-          ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
-        ) %>% 
-        ggplot(
-          aes(
-            x = Rating
-            ,fill = Pass
-            ,colour = Pass
-          )
-        ) +
-        geom_bar() +
-        scale_fill_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_colour_brewer(
-          type = "qual"
-          ,palette = "Set2"
-          ,direction = -1
-        ) +
-        scale_x_discrete(limit = 1:7) +
-        labs(title = "Histogram of Generic Ratings") +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_y"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "fixed"
-          )
-        }
-    }
   })
   
   # Violin Plot ---------
   output$violin <- renderPlot({
-    if(input$question_set == "P"){
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with("P")
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        ggplot(
-          aes(
-            x = Question
-            ,y = Rating
-          )
-        ) +
-        geom_violin() +
-        geom_point(
-          data = panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "P"))
-          ,aes(shape = as.factor(RATER))
-        ) +
-        labs(title = "Violin Plot of Positive Ratings") +
-        scale_shape_manual(
-          values = 8
-          ,name = element_blank()
-          ,labels = "Expert's Rating"
-        ) +
-        scale_y_discrete(limit = 1:7) +
-        theme(
-          axis.text.x = element_blank()
-          ,axis.title.x = element_blank()
-          ,legend.position = "bottom"
-        ) +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_x"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "free_x"
-          )
+    panss_tests %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with(input$question_set)
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      ggplot(
+        aes(
+          x = Question
+          ,y = Rating
+        )
+      ) +
+      geom_violin() +
+      geom_point(
+        data = panss_rater_all_lang %>% 
+          filter(str_detect(string = Question, pattern = input$question_set))
+        ,aes(shape = as.factor(RATER))
+      ) +
+      labs(title = paste("Violin Plot of", question_cats[[input$question_set]], "Ratings")) +
+      scale_shape_manual(
+        values = 8
+        ,name = element_blank()
+        ,labels = "Expert's Rating"
+      ) +
+      scale_y_discrete(limit = 1:7) +
+      theme(
+        axis.text.x = element_blank()
+        ,axis.title.x = element_blank()
+        ,legend.position = "bottom"
+      ) +
+      if(input$by_lang){
+        facet_grid(
+          LANG ~ Question
+          ,scales = "free_x"
+        )
+      } else{
+        facet_grid(
+          ~ Question
+          ,scales = "free_x"
+        )
         }
-    } else if(input$question_set == "N"){
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with("N")
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        ggplot(
-          aes(
-            x = Question
-            ,y = Rating
-          )
-        ) +
-        geom_violin() +
-        geom_point(
-          data = panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "N"))
-          ,aes(shape = as.factor(RATER))
-        ) +
-        labs(title = "Violin Plot of Negative Ratings") +
-        scale_shape_manual(
-          values = 8
-          ,name = element_blank()
-          ,labels = "Expert's Rating"
-        ) +
-        scale_y_discrete(limit = 1:7) +
-        theme(
-          axis.text.x = element_blank()
-          ,axis.title.x = element_blank()
-          ,legend.position = "bottom"
-        ) +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_x"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "free_x"
-          )
-        }
-    } else{
-      panss_tests %>% 
-        select(
-          RATER
-          ,LANG
-          ,starts_with("G")
-        ) %>% 
-        gather(
-          key = "Question"
-          ,value = "Rating"
-          ,-RATER
-          ,-LANG
-        ) %>% 
-        ggplot(
-          aes(
-            x = Question
-            ,y = Rating
-          )
-        ) +
-        geom_violin() +
-        geom_point(
-          data = panss_rater_all_lang %>% 
-            filter(str_detect(string = Question, pattern = "G"))
-          ,aes(shape = as.factor(RATER))
-        ) +
-        labs(title = "Violin Plot of Generic Ratings") +
-        scale_shape_manual(
-          values = 8
-          ,name = element_blank()
-          ,labels = "Expert's Rating"
-        ) +
-        scale_y_discrete(limit = 1:7) +
-        theme(
-          axis.text.x = element_blank()
-          ,axis.title.x = element_blank()
-          ,legend.position = "bottom"
-        ) +
-        if(input$by_lang){
-          facet_grid(
-            LANG ~ Question
-            ,scales = "free_x"
-          )
-        } else{
-          facet_grid(
-            ~ Question
-            ,scales = "free_x"
-          )
-        }
-    }
   })
   
   # Proportion Plot ----------
@@ -482,7 +278,8 @@ function(input, output){
         ,palette = "Set2"
         ,direction = -1
       ) +
-      labs(title = "Proportion of Raters who Passed by Language")
+      labs(title = "Proportion of Raters who Passed by Language") +
+      theme(legend.position = "bottom")
   })
   
   # Logit Regression ----------
@@ -506,5 +303,42 @@ function(input, output){
         )
       ) %>% 
       map(summary)
+  })
+  
+  # Rater Results ----------
+  output$results <- renderDataTable({
+    panss_tests %>% 
+      select(
+        RATER
+        ,LANG
+        ,starts_with(input$question_set)
+      ) %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>%
+      filter(RATER == input$rater_num) %>% 
+      left_join(
+        panss_rater_all_lang %>% 
+          filter(str_detect(string = Question, pattern = input$question_set)) %>% 
+          select(-RATER)
+        ,by = c("Question", "LANG")
+        ,suffix = c("", " Expert")
+      ) %>% 
+      mutate(
+        LB = `Rating Expert` - 1
+        ,UB = `Rating Expert` + 1
+        ,Pass = if_else(Rating >= LB & Rating <= UB, TRUE, FALSE)
+      ) %>% 
+      select(
+        RATER = RATER
+        ,Language = LANG
+        ,Question
+        ,`Your Rating` = Rating
+        ,`Experts Rating` = `Rating Expert`
+        ,Pass
+      )
   })
 }

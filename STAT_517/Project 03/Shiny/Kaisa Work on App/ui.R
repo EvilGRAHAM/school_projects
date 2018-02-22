@@ -32,14 +32,6 @@ fluidPage(
           ,"Facet by Language"
           ,value = FALSE
         )
-        # ,selectizeInput(
-        #   inputId = "results"
-        #   ,label = "Results-Proportions Passed"
-        #   ,choices = 
-        #     c(
-        #       "Proportions passed by Languages"
-        #     )
-        # )
         ,numericInput(
           inputId = "rater_num"
           ,label = "Enter your Rater ID"
@@ -56,6 +48,7 @@ fluidPage(
     ,column(
       width = 8
       ,offset = 0
+      ,dataTableOutput("results")
       ,plotOutput("hist")
       ,plotOutput("violin")
       ,plotOutput("prop")
