@@ -17,7 +17,7 @@ theme_minimal2 <-
   )
 
 # Data Import ----------
-panss <- # "../Results App/Panssdata_Modified.csv" %>%
+panss <- 
    "../Shiny/data/Panssdata_Modified.csv" %>% 
   read_csv() %>% 
   filter_all(all_vars(!is.na(.))) %>% 
@@ -428,51 +428,6 @@ panss_tests %>%
     )
   ) +
   geom_violin() +
-  # geom_line(
-  #   data = 
-  #     rbind(
-  #       panss_rater %>% 
-  #         select(
-  #           RATER
-  #           ,LANG
-  #           ,starts_with("G")
-  #         ) %>% 
-  #         gather(
-  #           key = "Question"
-  #           ,value = "Rating"
-  #           ,-RATER
-  #           ,-LANG
-  #         )
-  #       ,panss_rater %>% 
-  #         select(
-  #           RATER
-  #           ,LANG
-  #           ,starts_with("G")
-  #         ) %>% 
-  #         gather(
-  #           key = "Question"
-  #           ,value = "Rating"
-  #           ,-RATER
-  #           ,-LANG
-  #         ) %>% 
-  #         mutate(LANG = "French")
-  #       ,panss_rater %>% 
-  #         select(
-  #           RATER
-  #           ,LANG
-  #           ,starts_with("G")
-  #         ) %>% 
-  #         gather(
-  #           key = "Question"
-  #           ,value = "Rating"
-  #           ,-RATER
-  #           ,-LANG
-  #         ) %>% mutate(LANG = "Italian")
-  #     )
-  #   ,aes(group = Question)
-  #   ,linetype = "dashed"
-  # ) +
-  # facet_wrap(~ Question) +
   facet_grid(
     LANG ~ Question
     ,scales = "free_x"
@@ -555,4 +510,9 @@ panss_G_logit <-
     ,family = binomial
   )
 summary(panss_G_logit)
+
+
+panss_results %>% 
+  group_by(LANG) %>% 
+  summarize_at(vars("P Pass", "N Pass", "G Pass", "Passes"), mean)
 

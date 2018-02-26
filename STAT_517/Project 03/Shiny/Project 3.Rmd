@@ -59,7 +59,6 @@ This report is studying the affects of the PANSS instrument being used in differ
 The data entry app was designed to be used during the PANSS testing and the data analysis app was designed to be used after all physicians in the workshop had entered their data. 
 
 # Data Collection Protocol
-
 In order to collect the data, an application was developed using the Shiny Package in R. To use this application each physician must have access to a computer and the internet during the assessment.
 
 The app is accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
