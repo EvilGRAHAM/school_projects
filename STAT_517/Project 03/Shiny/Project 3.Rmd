@@ -1,0 +1,92 @@
+---
+title: "Data Analysis System Develop for physicians completing PANSS testing and the effect language has on the score"
+author: "Kaisa Roggeveen, Scott Graham"
+date: "Febuary 27th 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+  - \newcommand{\lnit}{{\operatorname{Logit}}}
+output: 
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pander, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
+
+set.seed(5609)
+
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+        ,fill = NA
+      )
+    )
+```
+
+# Summary
+The intent of this report was to develop a data entry and analysis system for the PANSS instrument where results could be calculated in less than a half hour. The data entry system was designed to give each physician a unique ID, a language selection, a scale to input the severity of each symptom and save all enteries into a file. The data analysis system was designed to retreive the saved file and allow physicians to enter their unique ID. The data analysis system determined whether the physician received a passing score for each PANSS system and displayed the overall results for physicians receiving passing scores based on their language. From this analysis it was determined that language does influence the passing score of the physician.
+
+
+# Introduction
+
+The Positive and Negative Syndrome Scale (PANSS) Instrument is a test used for accurately assessing the status of a patient's psychosis. The PANSS assement involves physicians ranking a patient's psychological symptoms on a scale from 1 to 7, low to high respectively. 
+
+There are thirty different psychological symptoms that the physicians will rank. The first seven scaled symptoms are the positive symptoms, delusions, conceptual disorganization, hallucinatory behavior, excitement, gradiosity and  suspiciousness/persecution and hostility. The next seven scaled symptoms are the negative symptoms, blunted affect, emotional withdrawal, poor rapport, passive/apathetic social withdrawal, difficulty in abstract thinking, lack of spontaneity and stereotyped thinking. The final symptoms scaled are the generic symptoms, stomatic concern, anxiety, guilt feeling, tension, mannerisms and posturing, depression, motor retardation, uncooperativeness, unusual thought content, disorientation, poor attention, lack of judgement and insight, disturbance of volition, poor impulse control, preoccupation and active social avoidance. 
+
+This report is studying the affects of the PANSS instrument being used in different languages and the affects that language has on a physician receving a passing score. This report explains the developement of the Apps for a PANSS testing workshop for the data entry and the data analysis.
+
+The data entry app was designed to be used during the PANSS testing and the data analysis app was designed to be used after all physicians in the workshop had entered their data. 
+
+# Data Collection Protocol
+
+In order to collect the data, an application was developed using the Shiny Package in R. To use this application each physician must have access to a computer and the internet during the assessment.
+
+The app is accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
+
+This application gives each physician a unique Rater ID, and each physician would be able to select their choice of language to complete the ratings of the patients symptoms. 
+
+![]("Project 03/Shiny/data/image1.png")
+```{r}
+
+```
+
+
+The application displays the three symtom sections, positive, negative and generic, in individual columns. The first column displays the seven positive symptoms, the second column displays the seven negative symptoms and the last comlumn displays the 16 generic symptoms. Each physician can rate the symptom on a slider-scale between 1 (low) and 7 (high). Once the physician is satified with all of their responses, they can submit their responses. All of the submitted responses are collected in a comma-separted values (csv) document. 
+
+
+
+
+
+# Data Analysis System
+
+# Data Analysis
+
+## Including Plots
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+# Conclusions
+
+# Recommendations
