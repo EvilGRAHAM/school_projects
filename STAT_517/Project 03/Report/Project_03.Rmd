@@ -1,7 +1,7 @@
 ---
-title: "PANSS"
-author: "Scott Graham, Kaisa Roggeveen"
-date: "February 28, 2018"
+title: "Data Analysis System Develop for physicians completing PANSS testing and the effect language has on the score"
+author: "Kaisa Roggeveen, Scott Graham"
+date: "Febuary 27th 2018"
 header-includes:
   - \newcommand{\Prob}{\operatorname{P}}
   - \newcommand{\E}{\operatorname{E}}
@@ -14,22 +14,17 @@ header-includes:
   - \newcommand{\that}{{\hat{T}}}
   - \newcommand{\med}{{\tilde{Y}}}
   - \newcommand{\lnit}{{\operatorname{Logit}}}
-output:
+output: 
   pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE)
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
-library(MASS, warn.conflicts = FALSE, quietly = TRUE)
-library(DAAG, warn.conflicts = FALSE, quietly = TRUE)
-library(caret, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
 library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
-library(knitr, warn.conflicts = FALSE, quietly = TRUE)
-
-set.seed(5609)
 
 theme_minimal2 <- theme_minimal() %>%  theme_set()
 theme_minimal2 <-
@@ -42,41 +37,218 @@ theme_minimal2 <-
     ,strip.background = element_rect(
       linetype = "solid"
       ,colour = "grey92"
-        ,fill = NA
-      )
+      ,fill = NA
     )
+  )
+
+# Data Import ----------
+panss <- # "../Results App/Panssdata_Modified.csv" %>%
+   "../Shiny/data/Panssdata_Modified.csv" %>% 
+  read_csv() %>% 
+  filter_all(all_vars(!is.na(.))) %>% 
+  mutate(
+    LANG = if_else(LANG == "E", "English", LANG)
+    ,LANG = if_else(LANG == "F", "French", LANG)
+    ,LANG = if_else(LANG == "I", "Italian", LANG)
+  ) %>% 
+  rename(
+    G01 = G1
+    ,G02 = G2
+    ,G03 = G3
+    ,G04 = G4
+    ,G05 = G5
+    ,G06 = G6
+    ,G07 = G7
+    ,G08 = G8
+    ,G09 = G9
+  ) 
+
+# Data Cleaning ----------
+panss_rater <- 
+  panss %>% 
+  filter(RATER == 0)
+
+panss_tests <- 
+  panss %>% 
+  filter(RATER != 0)
+
+panss_tests %>% 
+  select(-LANG) %>% 
+  apply(
+    2
+    ,sum
+  )
+
+panss_diff <-
+  as.tibble(
+    abs(panss_tests[, -2] - panss_rater[rep(x = 1, times = as.numeric(count(panss_tests))), -2])
+  ) %>% 
+  mutate_all(as.double) %>% 
+  mutate_at(
+    .vars = vars(-matches("RATER"))
+    ,.funs = ~ ifelse(. == 1, . - 1, .)
+  ) %>%
+  mutate_at(
+    .vars = vars(-matches("RATER"))
+    ,.funs = ~ ifelse(. != 0, 0, 1)
+  ) %>%
+  left_join(
+    panss_tests %>% 
+      select(RATER, LANG)
+    ,by = "RATER"
+  )
+
+panss_results <-
+  panss_diff %>% 
+    transmute(
+      RATER = RATER
+      ,LANG = LANG
+      ,P = P1 + P2 + P3 + P4 + P5 + P6 + P7
+      ,N = N1 + N2 + N3 + N4 + N5 + N6 + N7
+      ,G = G01 + G02 + G03 + G04 + G05 + G06 + G07 + G08 + G09 + G10 + G11 + G12 + G13 + G14 + G15 + G16
+    ) %>% 
+  mutate(
+    `P Pass` = if_else(P >= 5, TRUE, FALSE)
+    ,`N Pass` = if_else(N >= 5, TRUE, FALSE)
+    ,`G Pass` = if_else(G >= 10, TRUE, FALSE)
+    ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
+  )
 ```
 
-
-
 # Summary
-
+The intent of this report was to develop a data entry and analysis system for the PANSS instrument where results could be calculated in less than a half hour. The data entry system was designed to give each physician a unique ID, a language selection, a scale to input the severity of each symptom and save all enteries into a file. The data analysis system was designed to retreive the saved file and allow physicians to enter their unique ID. The data analysis system determined whether the physician received a passing score for each PANSS system and displayed the overall results for physicians receiving passing scores based on their language. From this analysis it was determined that language does influence the passing score of the physician.
 
 
 # Introduction
 
+The Positive and Negative Syndrome Scale (PANSS) Instrument is a test used for accurately assessing the status of a patient's psychosis. The PANSS assement involves physicians ranking a patient's psychological symptoms on a scale from 1 to 7, low to high respectively. 
 
+There are thirty different psychological symptoms that the physicians will rank. The first seven scaled symptoms are the positive symptoms, delusions, conceptual disorganization, hallucinatory behavior, excitement, gradiosity and  suspiciousness/persecution and hostility. The next seven scaled symptoms are the negative symptoms, blunted affect, emotional withdrawal, poor rapport, passive/apathetic social withdrawal, difficulty in abstract thinking, lack of spontaneity and stereotyped thinking. The final symptoms scaled are the generic symptoms, stomatic concern, anxiety, guilt feeling, tension, mannerisms and posturing, depression, motor retardation, uncooperativeness, unusual thought content, disorientation, poor attention, lack of judgement and insight, disturbance of volition, poor impulse control, preoccupation and active social avoidance. 
 
-# Data Collection
+This report is studying the affects of the PANSS instrument being used in different languages and the affects that language has on a physician receving a passing score. This report explains the developement of the Apps for a PANSS testing workshop for the data entry and the data analysis.
 
+The data entry app was designed to be used during the PANSS testing and the data analysis app was designed to be used after all physicians in the workshop had entered their data. 
 
-# Analysis
-## Preliminary Analysis
+# Data Collection Protocol
 
+In order to collect the data, an application was developed using the Shiny Package in R. To use this application each physician must have access to a computer and the internet during the assessment.
 
-## Initial Regression Models
+The app is accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
 
+This application gives each physician a unique Rater ID, and each physician would be able to select their choice of language to complete the ratings of the patients symptoms. 
 
+![Image of the Language input](images/image1.png)
+
+The application displays the three symtom sections, positive, negative and generic, in individual columns. The first column displays the seven positive symptoms, the second column displays the seven negative symptoms and the last comlumn displays the 16 generic symptoms. Each physician can rate the symptom on a slider-scale between 1 (low) and 7 (high). Once the physician is satified with all of their responses, they can submit their responses. All of the submitted responses are collected in a comma-separted values (csv) document. 
+
+![Image of the Slider-Scale](images/image2.png)
+
+# Data Analysis System
+
+To create a quick and effective data analysis system an application was developed using the Shiny package in R. To view the results from the data analysis an individual physician would need access to a computer and the internet or the overall results could be shown to all physicians on an overhead screen.
+
+The application is also accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
+
+The application has a dropdown menu where the physician can choose to display their results, a check box set the results by language and a dropdown menu where each individual physician can enter their Rater Id and the results of the workshop will be displayed. 
+
+The data analysis application gathers the data from the csv file that was created in the input application. The data then runs through a data cleaner which checks that there are no reponses outside of the scaled data, and there are no reponses in letters or symbols.
+
+# Data Analysis
+
+## Physician's Passing Score
+To determine if a physician passed or failed the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a pass on that symptom. 
+
+The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symtoms section at least 10 out of the 16 must be a "pass".
+
+The third criteria checked was if the physician "passed"" all three sections. If the physician "passed"" all three sections, then they received a "pass" for the PANSS training.
+
+The following table shows the results of the physicians.
+
+```{r pressure, echo=FALSE}
+panss_results %>% 
+  select(
+    RATER
+    ,LANG
+    ,Passes
+  ) %>% 
+  kable(caption = "foobar")
+```
+
+## Affect of Language on Passing Score
+To visualize the data histograms of the section and symptoms were stratified by language. 
+
+```{r Visualizations}
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("P")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Positive Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("N")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Negative Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("G")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Generic Ratings by Language")
+```
+
+# Conclusions
 
 # Recommendations
 
-\newpage
-# References
-
-
 
 # Appendix
-## Appendix A: Code
-```{r Appendix A, eval=FALSE, echo=TRUE}
-# Pass
+## Appendix A
+```{r Appendix A, echo=TRUE, eval=FALSE}
+print("foo")
 ```
