@@ -142,6 +142,8 @@ The application has a dropdown menu where the physician can choose to display th
 The data analysis application gathers the data from the csv file that was created in the input application. The data then runs through a data cleaner which checks that there are no reponses outside of the scaled data, and there are no reponses in letters or symbols.
 
 # Data Analysis
+
+## Physician's Passing Score
 To determine if a physician passed or failed the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a pass on that symptom. 
 
 The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symtoms section at least 10 out of the 16 must be a "pass".
@@ -150,17 +152,77 @@ The third criteria checked was if the physician "passed"" all three sections. If
 
 The following table shows the results of the physicians.
 
-
-receive at least five passes out of the seven questions for the positive and negative symptoms and at least ten out of the sixteen questions for the generic symptoms. 
-
-The criteria for a physician to pass the PANSS training workshop required them to  involve receiving a score that is within +1 or -1 of the expert's rating and 
-
-## Including Plots
 ```{r pressure, echo=FALSE}
 kable(dafr_physician_results)
 ```
 
+## Affect of Language on Passing Score
+To visualize the data histograms of the section and symptoms were stratified by language. 
 
+```{r Visualizations}
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("P")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Positive Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("N")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Negative Ratings by Language")
+
+panss_tests %>% 
+  select(
+    RATER
+    ,LANG
+    ,starts_with("G")
+  ) %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(aes(x = Rating)) +
+  geom_bar() +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(title = "Histogram of Generic Ratings by Language")
+```
 
 # Conclusions
 
