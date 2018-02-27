@@ -5,7 +5,7 @@ library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 
 
 # Data Import ----------
-panss_old <- read_csv(file = "../data/Panssdata_test.csv")
+panss_old <- read_csv(file = "../../data/Panssdata_test.csv")
 
 
 #Server ----------
@@ -57,7 +57,7 @@ shinyServer(
       input$submit
       ,{
         showModal(modalDialog(title = "Confirmation", "Are you sure you wish to submit?"))
-        write_csv(x = panss_new(), path = "../data/Panssdata_test.csv")
+        write_csv(x = panss_new(), path = "../../data/Panssdata_test.csv")
         # panss_old_1() <- read_csv(file = "data/Panssdata_test.csv")
       }
     )

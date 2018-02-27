@@ -42,8 +42,8 @@ theme_minimal2 <-
   )
 
 # Data Import ----------
-panss <- # "../Results App/Panssdata_Modified.csv" %>%
-   "../Shiny/data/Panssdata_Modified.csv" %>% 
+panss <-
+   "../data/Panssdata_Modified.csv" %>% 
   read_csv() %>% 
   filter_all(all_vars(!is.na(.))) %>% 
   mutate(
@@ -71,13 +71,6 @@ panss_rater <-
 panss_tests <- 
   panss %>% 
   filter(RATER != 0)
-
-panss_tests %>% 
-  select(-LANG) %>% 
-  apply(
-    2
-    ,sum
-  )
 
 panss_diff <-
   as.tibble(
@@ -113,19 +106,48 @@ panss_results <-
     ,`G Pass` = if_else(G >= 10, TRUE, FALSE)
     ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
   )
+
+panss_rater_all_lang <- 
+  panss_rater %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  union(
+    panss_rater %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      mutate(LANG = "French")
+  ) %>% 
+  union(
+    panss_rater %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      mutate(LANG = "Italian")
+  )
 ```
 
 # Summary
-The intent of this report was to develop a data entry and analysis system for the PANSS instrument where results could be calculated in less than a half hour. The data entry system was designed to give each physician a unique ID, a language selection, a scale to input the severity of each symptom and save all enteries into a file. The data analysis system was designed to retreive the saved file and allow physicians to enter their unique ID. The data analysis system determined whether the physician received a passing score for each PANSS system and displayed the overall results for physicians receiving passing scores based on their language. From this analysis it was determined that language does influence the passing score of the physician.
+The intent of this report was to develop a data entry and analysis system for the PANSS instrument where results could be calculated in less than a half hour. The data entry system was designed to give each physician a unique ID, a language selection, a scale to input the severity of each symptom and save all entries into a file. The data analysis system was designed to retrieve the saved file and allow physicians to enter their unique ID. The data analysis system determined whether the physician received a passing score for each PANSS system and displayed the overall results for physicians receiving passing scores based on their language. From this analysis it was determined that language does influence the passing score of the physician.
 
 
 # Introduction
 
-The Positive and Negative Syndrome Scale (PANSS) Instrument is a test used for accurately assessing the status of a patient's psychosis. The PANSS assement involves physicians ranking a patient's psychological symptoms on a scale from 1 to 7, low to high respectively. 
+The Positive and Negative Syndrome Scale (PANSS) Instrument is a test used for accurately assessing the status of a patient's psychosis. The PANSS assessment involves physicians ranking a patient's psychological symptoms on a scale from 1 to 7, low to high respectively. 
 
-There are thirty different psychological symptoms that the physicians will rank. The first seven scaled symptoms are the positive symptoms, delusions, conceptual disorganization, hallucinatory behavior, excitement, gradiosity and  suspiciousness/persecution and hostility. The next seven scaled symptoms are the negative symptoms, blunted affect, emotional withdrawal, poor rapport, passive/apathetic social withdrawal, difficulty in abstract thinking, lack of spontaneity and stereotyped thinking. The final symptoms scaled are the generic symptoms, stomatic concern, anxiety, guilt feeling, tension, mannerisms and posturing, depression, motor retardation, uncooperativeness, unusual thought content, disorientation, poor attention, lack of judgement and insight, disturbance of volition, poor impulse control, preoccupation and active social avoidance. 
+There are thirty different psychological symptoms that the physicians will rank. The first seven scaled symptoms are the positive symptoms, delusions, conceptual disorganization, hallucinatory behavior, excitement, grandiosity and  auspiciousness/persecution and hostility. The next seven scaled symptoms are the negative symptoms, blunted affect, emotional withdrawal, poor rapport, passive/apathetic social withdrawal, difficulty in abstract thinking, lack of spontaneity and stereotyped thinking. The final symptoms scaled are the generic symptoms, somatic concern, anxiety, guilt feeling, tension, mannerisms and posturing, depression, motor retardation, cooperativeness, unusual thought content, disorientation, poor attention, lack of judgement and insight, disturbance of volition, poor impulse control, preoccupation and active social avoidance. 
 
-This report is studying the affects of the PANSS instrument being used in different languages and the affects that language has on a physician receving a passing score. This report explains the developement of the Apps for a PANSS testing workshop for the data entry and the data analysis.
+This report is studying the affects of the PANSS instrument being used in different languages and the affects that language has on a physician reeving a passing score. This report explains the development of the Apps for a PANSS testing workshop for the data entry and the data analysis.
 
 The data entry app was designed to be used during the PANSS testing and the data analysis app was designed to be used after all physicians in the workshop had entered their data. 
 
@@ -139,7 +161,7 @@ This application gives each physician a unique Rater ID, and each physician woul
 
 ![Image of the Language input](images/image1.png)
 
-The application displays the three symtom sections, positive, negative and generic, in individual columns. The first column displays the seven positive symptoms, the second column displays the seven negative symptoms and the last comlumn displays the 16 generic symptoms. Each physician can rate the symptom on a slider-scale between 1 (low) and 7 (high). Once the physician is satified with all of their responses, they can submit their responses. All of the submitted responses are collected in a comma-separted values (csv) document. 
+The application displays the three symptom sections, positive, negative and generic, in individual columns. The first column displays the seven positive symptoms, the second column displays the seven negative symptoms and the last column displays the 16 generic symptoms. Each physician can rate the symptom on a slider-scale between 1 (low) and 7 (high). Once the physician is satisfied with all of their responses, they can submit their responses. All of the submitted responses are collected in a comma-departed values (CSV) document. 
 
 ![Image of the Slider-Scale](images/image2.png)
 
@@ -149,22 +171,22 @@ To create a quick and effective data analysis system an application was develope
 
 The application is also accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
 
-The application has a dropdown menu where the physician can choose to display their results, a check box set the results by language and a dropdown menu where each individual physician can enter their Rater Id and the results of the workshop will be displayed. 
+The application has a drop down menu where the physician can choose to display their results, a check box set the results by language and a drop down menu where each individual physician can enter their Rater Id and the results of the workshop will be displayed. 
 
-The data analysis application gathers the data from the csv file that was created in the input application. The data then runs through a data cleaner which checks that there are no reponses outside of the scaled data, and there are no reponses in letters or symbols.
+The data analysis application gathers the data from the CSV file that was created in the input application. The data then runs through a data cleaner which checks that there are no responses outside of the scaled data, and there are no responses in letters or symbols.
 
 # Data Analysis
 
 ## Physician's Passing Score
 To determine if a physician passed or failed the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a pass on that symptom. 
 
-The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symtoms section at least 10 out of the 16 must be a "pass".
+The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symptoms section at least 10 out of the 16 must be a "pass".
 
 The third criteria checked was if the physician "passed"" all three sections. If the physician "passed"" all three sections, then they received a "pass" for the PANSS training.
 
 The following table shows the results of the physicians.
 
-```{r pressure, echo=FALSE}
+```{r Results Table, echo=FALSE}
 panss_results %>% 
   select(
     RATER
@@ -174,72 +196,33 @@ panss_results %>%
   kable(caption = "foobar")
 ```
 
-## Affect of Language on Passing Score
+## Effect of Language on Passing Score
 To visualize the data histograms of the section and symptoms were stratified by language. 
 
-```{r Visualizations}
+```{r Histograms}
 panss_tests %>% 
-  select(
-    RATER
-    ,LANG
-    ,starts_with("P")
-  ) %>% 
   gather(
     key = "Question"
     ,value = "Rating"
     ,-RATER
     ,-LANG
   ) %>% 
-  ggplot(aes(x = Rating)) +
-  geom_bar() +
-  facet_grid(
-    LANG ~ Question
-    ,scales = "free_y"
-  ) +
-  scale_x_discrete(limit = 1:7) +
-  labs(title = "Histogram of Positive Ratings by Language")
-
-panss_tests %>% 
-  select(
-    RATER
-    ,LANG
-    ,starts_with("N")
+  left_join(
+    panss_rater_all_lang %>% 
+      # filter(str_detect(string = Question, pattern = input$question_set)) %>% 
+      select(-RATER)
+    ,by = c("Question", "LANG")
+    ,suffix = c("", " Expert")
   ) %>% 
-  gather(
-    key = "Question"
-    ,value = "Rating"
-    ,-RATER
-    ,-LANG
+  mutate_if(
+    .predicate = is.character
+    ,.funs = as.factor
   ) %>% 
-  ggplot(aes(x = Rating)) +
-  geom_bar() +
-  facet_grid(
-    LANG ~ Question
-    ,scales = "free_y"
-  ) +
-  scale_x_discrete(limit = 1:7) +
-  labs(title = "Histogram of Negative Ratings by Language")
-
-panss_tests %>% 
-  select(
-    RATER
-    ,LANG
-    ,starts_with("G")
-  ) %>% 
-  gather(
-    key = "Question"
-    ,value = "Rating"
-    ,-RATER
-    ,-LANG
-  ) %>% 
-  ggplot(aes(x = Rating)) +
-  geom_bar() +
-  facet_grid(
-    LANG ~ Question
-    ,scales = "free_y"
-  ) +
-  scale_x_discrete(limit = 1:7) +
-  labs(title = "Histogram of Generic Ratings by Language")
+  mutate(
+    LB = `Rating Expert` - 1
+    ,UB = `Rating Expert` + 1
+    ,Pass = if_else(Rating >= LB & Rating <= UB, "Pass", "Fail") %>% as.factor()
+      )
 ```
 
 # Conclusions
