@@ -20,6 +20,11 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(pander, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
 
 # Data Import ----------
 panss <- # "../Results App/Panssdata_Modified.csv" %>%
@@ -41,7 +46,7 @@ panss <- # "../Results App/Panssdata_Modified.csv" %>%
     ,G07 = G7
     ,G08 = G8
     ,G09 = G9
-  )
+  ) 
 
 # Data Cleaning ----------
 panss_rater <- 
@@ -137,11 +142,22 @@ The application has a dropdown menu where the physician can choose to display th
 The data analysis application gathers the data from the csv file that was created in the input application. The data then runs through a data cleaner which checks that there are no reponses outside of the scaled data, and there are no reponses in letters or symbols.
 
 # Data Analysis
-The criteria for a pass involve receiving a score that is within +1 or -1 of the expert's rating and receive at least five passes out of the seven questions for the positive and negative symptoms and at least ten out of the sixteen questions for the generic symptoms. 
+To determine if a physician passed or failed the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a pass on that symptom. 
+
+The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symtoms section at least 10 out of the 16 must be a "pass".
+
+The third criteria checked was if the physician "passed"" all three sections. If the physician "passed"" all three sections, then they received a "pass" for the PANSS training.
+
+The following table shows the results of the physicians.
+
+
+receive at least five passes out of the seven questions for the positive and negative symptoms and at least ten out of the sixteen questions for the generic symptoms. 
+
+The criteria for a physician to pass the PANSS training workshop required them to  involve receiving a score that is within +1 or -1 of the expert's rating and 
 
 ## Including Plots
 ```{r pressure, echo=FALSE}
-plot(pressure)
+kable(dafr_physician_results)
 ```
 
 

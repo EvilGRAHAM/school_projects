@@ -93,6 +93,7 @@ dafr_panss_results <- data.frame(panss_results)
 dafr_physician_results <- dafr_panss_results[,c(1,2,9)]
 
 
+
 # Data Visualization ----------
 panss_tests %>% 
   select(
