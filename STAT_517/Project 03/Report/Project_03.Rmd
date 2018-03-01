@@ -156,7 +156,7 @@ The data entry app was designed to be used during the PANSS testing and the data
 # Data Collection Protocol
 In order to collect the data, an application was developed using the Shiny Package in R. To use this application each physician must have access to a computer and the internet during the assessment.
 
-The app is accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
+The app is accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. An example of this can be found at http://grahamst.at/shiny-server/PANSS/Input_App/.
 
 This application gives each physician a unique Rater ID, and each physician would be able to select their choice of language to complete the ratings of the patients symptoms. 
 
@@ -170,13 +170,17 @@ The application displays the three symptom sections, positive, negative and gene
 
 To create a quick and effective data analysis system an application was developed using the Shiny package in R. To view the results from the data analysis an individual physician would need access to a computer and the internet or the overall results could be shown to all physicians on an overhead screen.
 
-This application is also accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. 
+This application is also accessible through a webpage that is published by the Statistical Consulting Services from the Department of Mathematical Statistics at the University of Calgary. An example of this can be found at http://grahamst.at/shiny-server/PANSS/Results_App/. Or seen in figures 3-5.
 
 The application has a drop down menu where the physician can choose to display the results to a given question set, a check box set the results by language and the ability for physicians to enter their unique ID, and display their results. 
 
 The data analysis application gathers the data from the CSV file/database that was created in the input application. The data then runs through a data cleaner which checks that there are no responses outside of the scope of the questions.
 
+![Results App Top](images/Results_App01.png)
 
+![Results App Middle](images/Results_App02.png)
+
+![Results App Bottom](images/Results_App03.png)
 
 # Data Analysis
 ## Physician's Passing Score
@@ -186,7 +190,7 @@ The second criteria check was the total number of "pass" questions in the positi
 
 The third criteria checked was if the physician "passed" all three sections. If the physician "passed" all three sections, then they received a "pass" for the PANSS training.
 
-The following table shows the results of the physicians. (Appendix B)
+The following table shows the summary results of the physicians. The full results can bee seen in Appendix B.
 ```{r Results Summary}
 panss_results %>% 
   group_by(LANG) %>%
@@ -219,7 +223,7 @@ panss_results %>%
 ## Effect of Language on Passing Score
 To visualize the data histograms of the section and symptoms were stratified by language. 
 
-```{r Histograms, fig.height=3.5}
+```{r P Hist, fig.height=3.5}
 panss_hist <- 
   panss_tests %>% 
   gather(
@@ -278,7 +282,10 @@ panss_hist %>%
     LANG ~ Question
     ,scales = "free_y"
   )
+```
 
+
+```{r N Hist, fig.height=3.5}
 panss_hist %>% 
   filter(str_detect(Question, "N")) %>% 
   ggplot(
@@ -312,7 +319,10 @@ panss_hist %>%
     LANG ~ Question
     ,scales = "free_y"
   )
+```
 
+
+```{r G 0108 Hist, fig.height=3.5}
 panss_hist %>% 
   filter(
     str_detect(Question, "G0")
@@ -349,7 +359,10 @@ panss_hist %>%
     LANG ~ Question
     ,scales = "free_y"
   )
+```
 
+
+```{r G 0916 Hist, fig.height=3.5}
 panss_hist %>% 
   filter(
     str_detect(Question, "G1") | Question == "G09"
@@ -386,6 +399,59 @@ panss_hist %>%
     ,scales = "free_y"
   )
 ```
+
+
+## Regression Analysis
+We performed a logistic regression on the results from the 3 question sets, as well as the end result, using language as the predictor. For all 4 regressions, the English respondents are used as the base case for comparing against the French respondents and the Italian respondents.
+
+```{r P Pass Regression}
+panss_logit <- 
+  panss_results %>% 
+  select(
+    LANG
+    ,contains("Pass")
+  ) %>% 
+  gather(
+    key = Set
+    ,value = Result
+    ,-LANG
+  ) %>% 
+  mutate_all(as.factor) %>% 
+  split(.$Set) %>% 
+  map(
+    ~ glm(
+      Result ~ LANG
+      ,data = .
+      ,family = binomial
+    )
+  )
+
+panss_logit$`P Pass` %>% 
+  pander(caption = "Passes Question Set P by Language")
+```
+
+For the P questions, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"P Pass"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"P Pass"))[["LANGItalian"]], 4)`
+
+```{r N Pass}
+panss_logit$`N Pass` %>% 
+  pander(caption = "Passes Question Set N by Language")
+```
+
+For the N questions, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"N Pass"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"N Pass"))[["LANGItalian"]], 4)`
+
+```{r G Pass}
+panss_logit$`G Pass` %>% 
+  pander(caption = "Passes Question Set G by Language")
+```
+
+For the G questions, the odds in favor of passing of a French respondent compared to an English respondent can't be calculated as all of the French respondents passed the G questions, hence the nonsensical output in the regression. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"G Pass"))[["LANGItalian"]], 4)`
+
+```{r Pass}
+panss_logit$Passes %>% 
+  pander(caption = "Passes PANSS by Language")
+```
+
+For the overall test, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGItalian"]], 4)`
 
 
 
