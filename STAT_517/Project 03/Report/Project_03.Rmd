@@ -136,6 +136,11 @@ panss_rater_all_lang <-
       mutate(LANG = "Italian")
   )
 ```
+Dr. Ken Gardner  \newline
+Assistant Resistrar College of Physicians and Surgeons \newline
+Province of Alberta \newline
+February 28 2018 \newline
+
 
 # Summary
 The intent of this report was to develop a data entry and analysis system for the PANSS instrument where results could be calculated in less than a half hour. The data entry system was designed to give each physician a unique ID, a language selection, a scale to input the severity of each symptom and save all entries into a file. The data analysis system was designed to retrieve the saved file and allow physicians to enter their unique ID. The data analysis system determined whether the physician received a passing score for each PANSS system and displayed the overall results for physicians receiving passing scores based on their language. From this analysis it was determined that language does influence the passing score of the physician.
@@ -176,7 +181,13 @@ This application is also accessible through a webpage that is published by the S
 
 The application has a drop down menu where the physician can choose to display the results to a given question set, a check box set the results by language and the ability for physicians to enter their unique ID, and display their results. 
 
-The data analysis application gathers the data from the CSV file/database that was created in the input application. The data then runs through a data cleaner which checks that there are no responses outside of the scope of the questions.
+The data analysis application gathers the data from the CSV file/database that was created in the input application. The data then runs through a data cleaner which checks that there are no responses outside of the scope of the questions. Next the physicians' ratings are compared to the experts ratings for each symptom. The results of this comaparison are printed in a table where the physician can review their scores and determine where they made errors. 
+
+The data analysis also displays overall results for all physicians. Histograms are used as a visual representation of the data. The histograms that are created for each section and each section can be stratified by langauge. In the histograms, the passing scores are coloured in green and failing scores are coloured in orange. 
+
+The data was also visualized using Box Plots. The expert's rating was marked by a red star (*), and can be stratified by language.
+
+To visualize overall passing scores bar plots of the proportion of raters who passed in each language are created for each section, Positive Symptoms, Negative Symptoms, Generic Symtoms and Overall. In the bar plots a passing score is coloured as green and a failing score are coloured in orange. These bar plots allow for a quick visualization of the data and the differences between the proportion of physicians passed based on language. 
 
 ![Results App Top](images/Results_App01.png)
 
@@ -459,7 +470,7 @@ For the overall test, the odds in favor of passing of a French respondent compar
 
 # Conclusions
 
-
+It can be concluded that language does impact a physicians score. 
 
 
 # Recommendations
