@@ -166,6 +166,8 @@ The application displays the three symptom sections, positive, negative and gene
 
 ![Image of the Slider-Scale](images/image2.png){height=30%}
 
+This data entry system was designed to prevent common issues seen in data collection. The system takes the inputs directly from the physicians and saves their responses in a CSV file, which eliminates potential errors made my humans when inputing the data. This system only allows physicians to choose numbers between 1 and 7, and therefore no numbers outside of these values would be recorded. The system also displays all of the questions at once so the physician can easily review their inputed symptom ratings.
+
 # Data Analysis System
 
 To create a quick and effective data analysis system an application was developed using the Shiny package in R. To view the results from the data analysis an individual physician would need access to a computer and the internet or the overall results could be shown to all physicians on an overhead screen.
@@ -183,8 +185,10 @@ The data analysis application gathers the data from the CSV file/database that w
 ![Results App Bottom](images/Results_App03.png)
 
 # Data Analysis
+The intial step into analyzing the data was to remove variables that were outside of the allowed inputs. The first screening test was if there were any symbols in the ratings. Any symbols found were removed and the rating was marked as NA. The second screening test was to identify letters in the ratings. If the letter "l" was found it was replaced by the number 1, otherwise the rating was marked at NA. The final step taken to clean the ratings of errors was to make sure all of the numbers were in between 1 and 7. If a rating was scored as "0" it was changed to a "1" and if a rating was scored as an "8" or a "9", the rating was changed to a "7".
+
 ## Physician's Passing Score
-To determine if a physician passed or failed the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a pass on that symptom. 
+To determine if a physician "passed" or "failed" the training they must meet certain criteria. The first criteria check was comparing each physician's symptom rating to an expert's symptom rating, if the physicians rating was within 1 of the expert's rating they received a "pass" on that symptom. 
 
 The second criteria check was the total number of "pass" questions in the positive, negative and generic symptoms sections. To receive a "pass" in the positive and negative symptoms sections at least 5 out of the 7 symptoms must be a "pass". To receive a "pass" in the generic symptoms section at least 10 out of the 16 must be a "pass".
 
@@ -221,7 +225,7 @@ panss_results %>%
 ```
 
 ## Effect of Language on Passing Score
-To visualize the data histograms of the section and symptoms were stratified by language. 
+To visualize the data, histograms the symptoms were stratified by language.
 
 ```{r P Hist, fig.height=3.5}
 panss_hist <- 
@@ -402,7 +406,7 @@ panss_hist %>%
 
 
 ## Regression Analysis
-We performed a logistic regression on the results from the 3 question sets, as well as the end result, using language as the predictor. For all 4 regressions, the English respondents are used as the base case for comparing against the French respondents and the Italian respondents.
+A logistic regression was preformed on the results from the 3 question sets, as well as the end result, using language as the predictor. For all 4 regressions, the English respondents are used as the base case for comparing against the French respondents and the Italian respondents.
 
 ```{r P Pass Regression}
 panss_logit <- 
@@ -452,8 +456,6 @@ panss_logit$Passes %>%
 ```
 
 For the overall test, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGItalian"]], 4)`
-
-
 
 # Conclusions
 
