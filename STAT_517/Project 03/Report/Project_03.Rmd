@@ -240,7 +240,7 @@ panss_results %>%
 ```
 
 ## Effect of Language on Passing Score
-To visualize the data, histograms the symptoms were stratified by language.
+To visualize the data, histograms the symptoms were stratified by language. The passing scores are coloured in green and the failing scores are coloured in orange. 
 
 ```{r P Hist, fig.height=3.5}
 panss_hist <- 
@@ -302,6 +302,7 @@ panss_hist %>%
     ,scales = "free_y"
   )
 ```
+
 
 
 ```{r N Hist, fig.height=3.5}
@@ -420,6 +421,55 @@ panss_hist %>%
 ```
 
 
+## Proportions of Raters who Passed by Language
+```{r Prop of R, fig.height= 3.5}
+panss_results %>% 
+  select(
+    -c(
+      P
+      ,N
+      ,G
+    )
+  ) %>% 
+  gather(
+    key = "Test"
+    ,value = "Result"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,colour = Result
+      ,fill = Result
+    )
+  ) +
+  geom_bar(position = "fill") +
+  facet_wrap(
+    ~ Test
+    ,scales = "fixed"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(title = "Proportion of Raters who Passed by Language")
+```
+
+In the bar plots above there are some noticeable differences betweeen the language and the number of physicians who passed and their language. 
+
+It appears that the proportions of italian speaking physicians who passed the PANSS training is the lowest for all sections and overall received the lowest proportion of physicians who passed. 
+
+The french speaking physicians had a lower proportion than the english speakers in the negative and positive symptoms sections. However all of the frenh speakers passed the generic symptom section and therefore more passed than the english speakers. 
+
+The English had the highest proportion of physicians who passed for the the positive and negative symptoms sections. The english speaking physicians had second highest proportions of physicians who passed the generic symptoms section, they were behind the french speaking physicians.
+
+From these plots it can be speculated that language does affect the passing score of a physician in the PANSS training. To address this issue logistic regression models are used. 
+
 ## Regression Analysis
 A logistic regression was preformed on the results from the 3 question sets, as well as the end result, using language as the predictor. For all 4 regressions, the English respondents are used as the base case for comparing against the French respondents and the Italian respondents.
 
@@ -472,46 +522,6 @@ panss_logit$Passes %>%
 
 For the overall test, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGItalian"]], 4)`
 
-## Proportions of Raters who Passed by Language
-
-
-```{r Prop of R, fig.height= 3.5}
-panss_results %>% 
-  select(
-    -c(
-      P
-      ,N
-      ,G
-    )
-  ) %>% 
-  gather(
-    key = "Test"
-    ,value = "Result"
-    ,-RATER
-    ,-LANG
-  ) %>% 
-  ggplot(
-    aes(
-      x = LANG
-      ,colour = Result
-      ,fill = Result
-    )
-  ) +
-  geom_bar(position = "fill") +
-  facet_wrap(
-    ~ Test
-    ,scales = "fixed"
-  ) +
-  scale_fill_brewer(
-    type = "qual"
-    ,palette = "Set2"
-  ) +
-  scale_colour_brewer(
-    type = "qual"
-    ,palette = "Set2"
-  ) +
-  labs(title = "Proportion of Raters who Passed by Language")
-```
 
 
 # Conclusions
