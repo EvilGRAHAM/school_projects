@@ -1,7 +1,7 @@
 ---
-title: "Data Analysis System Develop for physicians completing PANSS testing and the effect language has on the score"
+title: "Data Analysis System for physicians completing PANSS testing and the effect language has on the score"
 author: "Kaisa Roggeveen, Scott Graham"
-date: "Febuary 27th 2018"
+date: "Febuary 28th 2018"
 header-includes:
   - \newcommand{\Prob}{\operatorname{P}}
   - \newcommand{\E}{\operatorname{E}}
@@ -187,7 +187,11 @@ The data analysis also displays overall results for all physicians. Histograms a
 
 The data was also visualized using Box Plots. The expert's rating was marked by a red star (*), and can be stratified by language.
 
-To visualize overall passing scores bar plots of the proportion of raters who passed in each language are created for each section, Positive Symptoms, Negative Symptoms, Generic Symtoms and Overall. In the bar plots a passing score is coloured as green and a failing score are coloured in orange. These bar plots allow for a quick visualization of the data and the differences between the proportion of physicians passed based on language. 
+To visualize overall passing scores bar plots of the proportion of raters who passed in each language are created for each section, Positive Symptoms, Negative Symptoms, Generic Symtoms and Overall Results. In the bar plots a passing score is coloured as green and a failing score are coloured in orange. These bar plots allow for a quick visualization of the data and the differences between the proportion of physicians passed based on language. 
+
+
+SCOTT CAN YOU WRITE ABOUT THE LOGISTIC REGRESSION HERE. Maybe if we could explain the models that are used and why these models were choosen?
+
 
 ![Results App Top](images/Results_App01.png)
 
@@ -467,6 +471,48 @@ panss_logit$Passes %>%
 ```
 
 For the overall test, the odds in favor of passing of a French respondent compared to an English respondent increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGFrench"]], 4)`. For an Italian respondent compared to an English respondent, the odds in favor of passing increased on average by a multiplicative factor of `r round(exp(coef(panss_logit$"Passes"))[["LANGItalian"]], 4)`
+
+## Proportions of Raters who Passed by Language
+
+
+```{r Prop of R, fig.height= 3.5}
+panss_results %>% 
+  select(
+    -c(
+      P
+      ,N
+      ,G
+    )
+  ) %>% 
+  gather(
+    key = "Test"
+    ,value = "Result"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,colour = Result
+      ,fill = Result
+    )
+  ) +
+  geom_bar(position = "fill") +
+  facet_wrap(
+    ~ Test
+    ,scales = "fixed"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(title = "Proportion of Raters who Passed by Language")
+```
+
 
 # Conclusions
 
