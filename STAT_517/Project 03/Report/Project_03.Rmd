@@ -1,5 +1,5 @@
 ---
-title: "Data Analysis System for physicians completing PANSS testing and the effect language has on the score"
+title: "Data Analysis System for Physicians Completing PANSS Testing and the Effect Language Has on the Score"
 author: "Kaisa Roggeveen, Scott Graham"
 date: "Febuary 28th 2018"
 header-includes:
