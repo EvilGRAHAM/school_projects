@@ -23,19 +23,44 @@ start_date <- as_date("2018-03-13")
 # https://fred.stlouisfed.org/series/DPROPANEMBTX Mount Belvieu Propane Prices
 commodity_prices <- 
   tq_get(
-    x = tibble(commodity = c("DPROPANEMBTX"))
+    x = tibble(commodity = c("DPROPANEMBTX", "DCOILWTICO", "PMAIZMTUSDM", "PWHEAMTUSDM"))
     ,get = "economic.data"
-    ,from = start_date - years(5)
+    ,from = start_date - years(15)
     ,to = start_date
   ) %>%
+  filter(!is.na(price)) %>% 
   group_by(commodity) %>% 
-  tq_transmute(
+  tq_mutate(
     select = price
     ,mutate_fun = periodReturn
     ,period = "daily"
     ,col_rename = "R_a"
   )
 commodity_prices
+
+commodity_prices %>% 
+  ggplot(aes(x = date, y = price)) +
+  geom_line() +
+  facet_wrap(
+    ~ commodity
+    ,scales = "free_y"
+  )
+
+commodity_prices %>% 
+  ggplot(aes(x = date, y = R_a)) +
+  geom_line() +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "gam"
+    ,se = FALSE
+  ) +
+  facet_wrap(
+    ~ commodity
+    ,scales = "fixed"
+  )
 
 # FANG stocks as coined by Jim Cramer
 fang_list <- c("FB", "AMZN", "NFLX", "GOOG")
@@ -121,6 +146,14 @@ fang_stocks %>%
   ) %>% 
   ggplot(aes(x = date, y = R_a)) +
   geom_line() +
+  geom_smooth(
+    method = "lm"
+    ,se = FALSE
+  ) +
+  geom_smooth(
+    method = "gam"
+    ,se = FALSE
+  ) +
   facet_wrap(
     ~ symbol
     ,scales = "fixed"
