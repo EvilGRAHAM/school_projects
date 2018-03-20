@@ -144,13 +144,19 @@ measurements <- c("Length", "Width")
 
 # Introduction
 
-
+Background information about pear and cherry tree leaves. 
+Midrib is the central vein of a leaf.
 
 
 # Data
 ## Measurement Process
+The first step taken in the measurement of the leaves was to give each leaf an identification number based on the species. The method used to meausre the dimensions was to create a box with the minimum length and width in which the entire leaf would be encompassed in the box. 
 
+To begin creating the sides of the box, a ruler was aligned parallel to the midrib, which is the central vein in the leaf and moved towards the left and the right of the picture until only one point on the leaf remained [reference]. From the single point on the side of the leaf, a line was drawn parallel to the midrib of the leaf. 
 
+Next, the base and point of the leaf were measured, a ruler was placed perpendicular to the midrib and the ruler was moved towards to tip of the leaf until a single point remained, a line was draw perpendicular to the midrib at this point. At the base of the leaves the length of the leaf was set as the point where the leaf ends and the stem begins, at this point a line was drawn perpendicular to the midrib. 
+
+After all the boxes were created, the width (lines parallel to midrib) and the length (lines perpendicular to midrib) were measured and the results were recorded in a spread sheet. 
 
 ## Data Creation
 ```{r Data Creation 01}
