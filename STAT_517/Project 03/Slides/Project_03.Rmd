@@ -1,0 +1,473 @@
+---
+title: "Data Analysis System for Physicians Completing PANSS Testing and the Effect Language Has on the Score"
+author: "Kaisa Roggeveen, Scott Graham"
+date: "Febuary 28th 2018"
+output:
+  ioslides_presentation:
+    smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pander, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
+
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+  )
+
+# Data Import ----------
+panss <-
+  "../data/Panssdata_Modified.csv" %>% 
+  read_csv() %>% 
+  filter_all(all_vars(!is.na(.))) %>% 
+  mutate(
+    LANG = if_else(LANG == "E", "English", LANG)
+    ,LANG = if_else(LANG == "F", "French", LANG)
+    ,LANG = if_else(LANG == "I", "Italian", LANG)
+  ) %>% 
+  rename(
+    G01 = G1
+    ,G02 = G2
+    ,G03 = G3
+    ,G04 = G4
+    ,G05 = G5
+    ,G06 = G6
+    ,G07 = G7
+    ,G08 = G8
+    ,G09 = G9
+  ) 
+
+# Data Cleaning ----------
+panss_rater <- 
+  panss %>% 
+  filter(RATER == 0)
+
+panss_tests <- 
+  panss %>% 
+  filter(RATER != 0)
+
+panss_diff <-
+  as.tibble(
+    abs(panss_tests[, -2] - panss_rater[rep(x = 1, times = as.numeric(count(panss_tests))), -2])
+  ) %>% 
+  mutate_all(as.double) %>% 
+  mutate_at(
+    .vars = vars(-matches("RATER"))
+    ,.funs = ~ ifelse(. == 1, . - 1, .)
+  ) %>%
+  mutate_at(
+    .vars = vars(-matches("RATER"))
+    ,.funs = ~ ifelse(. != 0, 0, 1)
+  ) %>%
+  left_join(
+    panss_tests %>% 
+      select(RATER, LANG)
+    ,by = "RATER"
+  )
+
+panss_results <-
+  panss_diff %>% 
+  transmute(
+    RATER = RATER
+    ,LANG = LANG
+    ,P = P1 + P2 + P3 + P4 + P5 + P6 + P7
+    ,N = N1 + N2 + N3 + N4 + N5 + N6 + N7
+    ,G = G01 + G02 + G03 + G04 + G05 + G06 + G07 + G08 + G09 + G10 + G11 + G12 + G13 + G14 + G15 + G16
+  ) %>% 
+  mutate(
+    `P Pass` = if_else(P >= 5, TRUE, FALSE)
+    ,`N Pass` = if_else(N >= 5, TRUE, FALSE)
+    ,`G Pass` = if_else(G >= 10, TRUE, FALSE)
+    ,Passes = if_else(`P Pass` & `N Pass` & `G Pass`, TRUE, FALSE)
+  )
+
+panss_rater_all_lang <- 
+  panss_rater %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  union(
+    panss_rater %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      mutate(LANG = "French")
+  ) %>% 
+  union(
+    panss_rater %>% 
+      gather(
+        key = "Question"
+        ,value = "Rating"
+        ,-RATER
+        ,-LANG
+      ) %>% 
+      mutate(LANG = "Italian")
+  )
+```
+
+# Data Collection Protocol
+## Shiny App
+
+http://grahamst.at/shiny-server/PANSS/Input_App/
+
+# Data Analysis
+## Data Analysis System
+
+http://grahamst.at/shiny-server/PANSS/Results_App/
+
+## Data Cleaning
+```{r Data Changes}
+tibble(
+  RATER = c(10, 32, 40, 62)
+  ,LANG = 
+    c(
+      "English"
+      ,"French"
+      ,"Italian"
+      ,"Italian"
+    )
+  ,P3 = c(8, 5, 2, 6)
+  ,P7 = c(2, 2, 9, 1)
+  ,N2 = c(5, 4, 5, 0)
+  ,N7 = c(1, ".", 3, 2)
+) %>% 
+  kable(caption = "Data Entry Errors")
+```
+
+
+## Physician's Passing Score
+```{r Results Summary}
+panss_results %>% 
+  group_by(LANG) %>%
+  summarize_if(.predicate = is.logical, .funs = c(sum, length)) %>% 
+  select(
+    Language = LANG
+    ,`Passed P` = `P Pass_.Primitive("sum")`
+    ,`Passed N` = `N Pass_.Primitive("sum")`
+    ,`Passed G` = `G Pass_.Primitive("sum")`
+    ,`Passed` = `Passes_.Primitive("sum")`
+    ,`Total Physicians` = `Passes_.Primitive("length")`
+  ) %>%
+  kable(caption = "Number of Passes")
+```
+
+```{r Results Mean}
+panss_results %>% 
+  group_by(LANG) %>%
+  select(-RATER) %>% 
+  summarize_if(.predicate = is.numeric, .funs = mean) %>% 
+  rename(Language = LANG) %>%
+  kable(caption = "Mean Number of Questions Passed", digits = 4)
+```
+
+
+## Effect of Language on Passing Score
+### Positive Questions
+```{r P Hist, fig.height=3.5}
+panss_hist <- 
+  panss_tests %>% 
+  gather(
+    key = "Question"
+    ,value = "Rating"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  left_join(
+    panss_rater_all_lang %>% 
+      select(-RATER)
+    ,by = c("Question", "LANG")
+    ,suffix = c("", " Expert")
+  ) %>% 
+  mutate_if(
+    .predicate = is.character
+    ,.funs = as.factor
+  ) %>% 
+  mutate(
+    LB = `Rating Expert` - 1
+    ,UB = `Rating Expert` + 1
+    ,Pass = if_else(Rating >= LB & Rating <= UB, "Pass", "Fail") %>% as.factor()
+  )
+
+panss_hist %>% 
+  filter(str_detect(Question, "P")) %>% 
+  ggplot(
+    aes(
+      x = Rating
+      ,fill = Pass
+      ,colour = Pass
+    )
+  ) +
+  geom_bar() +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(
+    title = "Figure 6: Histogram of Positive Ratings"
+    ,x = "Rating"
+    ,y = "Count"
+    ,fill = "Result"
+    ,colour = "Result"
+  ) +
+  theme(legend.position = "bottom") +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  )
+```
+
+
+## Effect of Language on Passing Score
+### Negative Questions
+
+```{r N Hist, fig.height=3.5}
+panss_hist %>% 
+  filter(str_detect(Question, "N")) %>% 
+  ggplot(
+    aes(
+      x = Rating
+      ,fill = Pass
+      ,colour = Pass
+    )
+  ) +
+  geom_bar() +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(
+    title = "Figure 7: Histogram of Negative Ratings"
+    ,x = "Rating"
+    ,y = "Count"
+    ,fill = "Result"
+    ,colour = "Result"
+  ) +
+  theme(legend.position = "bottom") +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  )
+```
+
+## Effect of Language on Passing Score
+### Generic Questions (G01-G08)
+```{r G 0108 Hist, fig.height=3.5}
+panss_hist %>% 
+  filter(
+    str_detect(Question, "G0")
+    ,Question != "G09"
+  ) %>% 
+  ggplot(
+    aes(
+      x = Rating
+      ,fill = Pass
+      ,colour = Pass
+    )
+  ) +
+  geom_bar() +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(
+    title = "Figure 8: Histogram of General Ratings (G01-G08)"
+    ,x = "Rating"
+    ,y = "Count"
+    ,fill = "Result"
+    ,colour = "Result"
+  ) +
+  theme(legend.position = "bottom") +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  )
+```
+
+
+## Effect of Language on Passing Score
+### Generic Questions (G09-G16)
+```{r G 0916 Hist, fig.height=3.5}
+panss_hist %>% 
+  filter(
+    str_detect(Question, "G1") | Question == "G09"
+  ) %>% 
+  ggplot(
+    aes(
+      x = Rating
+      ,fill = Pass
+      ,colour = Pass
+    )
+  ) +
+  geom_bar() +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_x_discrete(limit = 1:7) +
+  labs(
+    title = "Figure 9: Histogram of General Ratings (G09-G16)"
+    ,x = "Rating"
+    ,y = "Count"
+    ,fill = "Result"
+    ,colour = "Result"
+  ) +
+  theme(legend.position = "bottom") +
+  facet_grid(
+    LANG ~ Question
+    ,scales = "free_y"
+  )
+```
+
+
+## Proportions of Raters who Passed by Language
+```{r Prop of R, fig.height= 3.5}
+panss_results %>% 
+  select(
+    -c(
+      P
+      ,N
+      ,G
+    )
+  ) %>% 
+  gather(
+    key = "Test"
+    ,value = "Result"
+    ,-RATER
+    ,-LANG
+  ) %>% 
+  ggplot(
+    aes(
+      x = LANG
+      ,colour = Result
+      ,fill = Result
+    )
+  ) +
+  geom_bar(position = "fill") +
+  facet_wrap(
+    ~ Test
+    ,scales = "fixed"
+  ) +
+  scale_fill_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+    ,direction = -1
+  ) +
+  labs(title = "Figure 10: Proportion of Raters who Passed by Language")
+```
+
+
+## Regression Analysis
+### Positive Question Regression
+```{r P Pass Regression}
+panss_logit <- 
+  panss_results %>% 
+  select(
+    LANG
+    ,contains("Pass")
+  ) %>% 
+  gather(
+    key = Set
+    ,value = Result
+    ,-LANG
+  ) %>% 
+  mutate_all(as.factor) %>% 
+  split(.$Set) %>% 
+  map(
+    ~ glm(
+      Result ~ LANG
+      ,data = .
+      ,family = binomial
+    )
+  )
+
+panss_logit$`P Pass` %>% 
+  pander(caption = "Passes Question Set P by Language")
+```
+
+## Regression Analysis
+### Negative Question Regression
+```{r N Pass}
+panss_logit$`N Pass` %>% 
+  pander(caption = "Passes Question Set N by Language")
+```
+
+## Regression Analysis
+### Generic Question Regression
+```{r G Pass}
+panss_logit$`G Pass` %>% 
+  pander(caption = "Passes Question Set G by Language")
+```
+
+## Regression Analysis
+### PANSS Overall Regression
+```{r Pass}
+panss_logit$Passes %>% 
+  pander(caption = "Passes PANSS by Language")
+```
+
+
+
+## Conclusions
+Evidently, there is a clear relationship between the language of the physician, and their odds in favor of passing. The Italian physicians performed noticeably worse compared to their English and French counterparts. However, do to small sample sizes (10), it may not be accurate to draw a meaningful conclusion, as more data collection is required. 
+
+In comparison, the French and English performed at about the same level. The French performed remarkably well at question set G, as all of them passed it. However the English on average answered the greatest number of questions correctly.
+
+
+
+## Recommendations
+It is recommended that the data collection method is changed to the one described in this report. This new method can insure accuracy of the results, as the responses are bounded between 1-7. It is also accessible on a variety of platforms, including mobile devices. Finally it interfaces with a variety of databases (SQL servers being most commons), or .xlsx or .csv files.
+
+This in turn can be automatically read into the Results application, which is then ready to be presented immediately upon finishing the test. The app is also mobile accessible, and is hosted on a simple server. By interfacing with the storage method used above, the results update immediately, accurate and stable data is used.
