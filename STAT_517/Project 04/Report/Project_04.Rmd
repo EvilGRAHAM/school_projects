@@ -208,6 +208,13 @@ leaf_data %>%
     )
   ) + 
   geom_density_2d() +
+  geom_point(
+    data = 
+      leaf_data %>% 
+      select(-Type)
+    ,colour="grey92"
+    ,alpha = 0.9
+  ) +
   geom_point() +
   facet_wrap(
     ~ Type
