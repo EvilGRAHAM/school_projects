@@ -140,19 +140,28 @@ leaf_data <-
 
 measurements <- c("Length", "Width")
 ```
-
+Dr. Steven M. Vamosi
+Associate Dean, Diversity, Equity and Inclusion
+Professor, Population Biology
+2500 University Drive NW
+Department of Biological Sciences
+University of Calgary
+Calgary AB
+T2N 1N4 Canada
 
 # Introduction
+The intent of this paper is to develop a method for classifying leaves as either Cherry or Pear, based on their measured length and width. This method was developed for Dr. Steven Vamosi, a botanist from the Universtiy of Calgary. 
 
-Background information about pear and cherry tree leaves. 
-Midrib is the central vein of a leaf.
+The classification method used was Linear discriminant analysis, developed by R.A Fischer. To .... To take training samples from a sampled population take measurements, from these measurements classification rules are created. This will then be tested against the classifying sample to see if there are any miss classifications.
+
+Cherry and Pear leaves are both leaves from fruit trees. Cherry trees belong to the genus Prunus and Pear trees belong to the genus Pyrus [2],[3]. A common feature amongst the leaves is that they both have a midrib, which is the centreal vein of the leaf which extends along the leaf's centerline. 
 
 
 # Data
 ## Measurement Process
 The first step taken in the measurement of the leaves was to give each leaf an identification number based on the species. The method used to meausre the dimensions was to create a box with the minimum length and width in which the entire leaf would be encompassed in the box. 
 
-To begin creating the sides of the box, a ruler was aligned parallel to the midrib, which is the central vein in the leaf and moved towards the left and the right of the picture until only one point on the leaf remained [reference]. From the single point on the side of the leaf, a line was drawn parallel to the midrib of the leaf. 
+To begin creating the sides of the box, a ruler was aligned parallel to the midrib, which is the central vein in the leaf and moved towards the left and the right of the picture until only one point on the leaf remained [1]. From the single point on the side of the leaf, a line was drawn parallel to the midrib of the leaf. 
 
 Next, the base and point of the leaf were measured, a ruler was placed perpendicular to the midrib and the ruler was moved towards to tip of the leaf until a single point remained, a line was draw perpendicular to the midrib at this point. At the base of the leaves the length of the leaf was set as the point where the leaf ends and the stem begins, at this point a line was drawn perpendicular to the midrib. 
 
@@ -467,5 +476,9 @@ leaf_data %>%
 
 # Conclusion
 
+# Appendix
+## References
+[1] The Parts of a Leaf. (17, October 30). Retrieved March 20, 18, from http://www.robinsonlibrary.com/science/botany/anatomy/leafparts.htm
+[2] Britannica, T. E. (2016, November 11). Cherry. Retrieved March 20, 2018, from https://www.britannica.com/plant/cherry
 
-
+[3] Britannica, T. E. (2015, May 13). Pear. Retrieved March 20, 2018, from https://www.britannica.com/plant/pear
