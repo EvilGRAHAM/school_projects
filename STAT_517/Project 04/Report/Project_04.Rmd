@@ -193,6 +193,25 @@ leaf_data %>%
 
 In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
 
+```{r Obs Space 01}
+leaf_data %>% 
+  ggplot(
+    aes(
+      x = Width
+      ,y = Length
+      ,colour = Type
+      ,label = `Number By Type`
+    )
+  ) + 
+  # geom_point() +
+  geom_text() +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(title = "Figure XX: Length vs Width Scatter Plot")
+```
+
 # Classification Procedure
 ## Training Data
 ```{r LDA}
@@ -203,6 +222,8 @@ leaf_lda <-
     ,data = .
     ,cv = TRUE
   )
+
+leaf_lda
 
 predict(leaf_lda, newdata = select(leaf_test, Length, Width))
 leaf_lda_pred <- predict(leaf_lda, newdata = select(leaf_data, Length, Width))
@@ -289,25 +310,42 @@ leaf_lda_tidy %>%
 
 
 ## Observation Space
-```{r Obs Space 01}
+```{r Obs Space 03}
 leaf_data %>% 
   ggplot(
     aes(
       x = Width
       ,y = Length
       ,colour = Type
-      ,label = `Number By Type`
     )
   ) + 
-  # geom_point() +
-  geom_text() +
+  geom_polygon(
+    data =
+      leaf_data %>%
+      split(.$Type) %>% 
+      map(~ select(., Width, Length)) %>%
+      map_df(~ chull(.)) %>% 
+      gather(
+        key = Type
+        ,value = `Number By Type`
+      ) %>% 
+      mutate(Type = as.factor(Type)) %>% 
+      left_join(leaf_data, by = c("Number By Type", "Type"))
+    ,alpha = 0.1
+  ) +
+  geom_point() +
   scale_colour_brewer(
     type = "qual"
     ,palette = "Set2"
   ) +
-  labs(title = "Figure XX: Length vs Width Scatter Plot")
+  labs(
+    title = "Figure XX: Length vs Width Scatter Plot"
+    ,subtitle = "Overlayed with the Convex Hull of that Type"
+  )
 ```
 
+# Probability Distributions
+## Contour
 ```{r Obs Space 02}
 leaf_data %>% 
   ggplot(
@@ -355,40 +393,6 @@ leaf_data %>%
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with a Contour Plot of that Type"
     ,colour = "Type"
-  )
-```
-
-```{r Obs Space 03}
-leaf_data %>% 
-  ggplot(
-    aes(
-      x = Width
-      ,y = Length
-      ,colour = Type
-    )
-  ) + 
-  geom_polygon(
-    data =
-      leaf_data %>%
-      split(.$Type) %>% 
-      map(~ select(., Width, Length)) %>%
-      map_df(~ chull(.)) %>% 
-      gather(
-        key = Type
-        ,value = `Number By Type`
-      ) %>% 
-      mutate(Type = as.factor(Type)) %>% 
-      left_join(leaf_data, by = c("Number By Type", "Type"))
-    ,alpha = 0.1
-  ) +
-  geom_point() +
-  scale_colour_brewer(
-    type = "qual"
-    ,palette = "Set2"
-  ) +
-  labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
-    ,subtitle = "Overlayed with the Convex Hull of that Type"
   )
 ```
 
