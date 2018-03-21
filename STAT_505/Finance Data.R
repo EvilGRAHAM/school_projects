@@ -25,7 +25,7 @@ commodity_prices <-
   tq_get(
     x = tibble(commodity = c("DPROPANEMBTX", "DCOILWTICO", "PMAIZMTUSDM", "PWHEAMTUSDM"))
     ,get = "economic.data"
-    ,from = start_date - years(15)
+    ,from = start_date - years(5)
     ,to = start_date
   ) %>%
   filter(!is.na(price)) %>% 
@@ -76,19 +76,14 @@ fang_stocks <-
   group_by(symbol)
 
 fang_stocks <- 
-  fang_stocks%>% 
+  fang_stocks %>% 
   tq_mutate(
     select = adjusted
     ,mutate_fun = periodReturn
     ,period = "daily"
     ,col_rename = "R_a"
   ) %>% 
-  tq_mutate(
-    select = adjusted
-    ,mutate_fun = apply.daily
-    ,FUN = log
-    ,col_rename = "log_adj"
-  )
+  mutate(log_return = log(R_a + 1))
 
 fang_stocks
 
