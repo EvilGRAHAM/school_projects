@@ -176,18 +176,10 @@ After all the boxes were created, the width (lines parallel to midrib) and the l
 ## Data Creation
 ```{r Data Creation 01}
 leaf_data %>% 
-  select(
-    Type
-    ,Length
-    ,Width
-  ) %>% 
-  kable()
-
-leaf_data %>% 
   select(-starts_with("Number")) %>% 
   group_by(Type) %>% 
   summary() %>% 
-  kable()
+  kable(caption = "Data Summary")
 ```
 
 In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
@@ -202,13 +194,16 @@ leaf_data %>%
       ,label = `Number By Type`
     )
   ) + 
-  # geom_point() +
   geom_text() +
   scale_colour_brewer(
     type = "qual"
     ,palette = "Set2"
   ) +
-  labs(title = "Figure XX: Length vs Width Scatter Plot")
+  labs(
+    title = "Figure XX: Length vs Width Scatter Plot"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
+  )
 ```
 
 # Classification Procedure (LDA)
@@ -222,7 +217,29 @@ leaf_lda <-
     ,cv = TRUE
   )
 
-leaf_lda
+leaf_lda$prior %>% 
+  as.data.frame() %>% 
+  rownames_to_column() %>% 
+  kable(
+    digits = 4
+    ,col.names = c("Type", "Probability")
+    ,caption = "LDA Prior Probabilities"
+  )
+
+leaf_lda$mean %>% 
+  kable(
+    digits = 4
+    ,caption = "LDA Group Means"
+  )
+
+leaf_lda$scaling %>% 
+  as.data.frame() %>% 
+  rownames_to_column() %>% 
+  kable(
+    digits = 4
+    ,col.names = c("Dimension", "Coefficient")
+    ,caption = "LDA Coefficients of Linear Discriminants"
+  )
 
 leaf_lda_pred <- predict(leaf_lda, newdata = select(leaf_data, Length, Width))
 
@@ -247,7 +264,9 @@ leaf_lda_tidy <-
     `Number By Predicted` = 1:length(Predicted)
   ) %>% 
   ungroup()
+```
 
+```{r LDA Results}
 leaf_lda_tidy %>% 
   select(
     Predicted
@@ -258,13 +277,52 @@ leaf_lda_tidy %>%
     ,`Pear Probability` = Pear
   ) %>% 
   mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
-  kable(digits = 4, caption = "blarg")
+  filter(!`Correct Prediction`) %>% 
+  kable(digits = 4, caption = "LDA Misclassification Results")
+
+leaf_lda_confusion <- confusionMatrix(leaf_lda_tidy$Predicted, leaf_lda_tidy$Actual)
+
+kable(
+  leaf_lda_confusion$table
+  ,caption = "LDA Confusion Matrix"
+)
+
+kable(
+  leaf_lda_confusion$byClass
+  ,caption = "LDA Confusion Matrix Stats"
+)
+```
+
+```{r LDA ROC}
+leaf_lda_tidy %>% 
+  roc(
+    Actual ~ Cherry
+    ,data = .
+  ) %>% 
+  ggroc() +
+  labs(
+    title = "Figure XX: ROC Curve"
+    ,subtitle = "Based on the LDA Model"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
+  )
 ```
 
 
 ## New Data
-```{r New Data foo}
-predict(leaf_lda, newdata = select(leaf_test, Length, Width))
+```{r New Data LDA}
+leaf_lda_newdata <- predict(leaf_lda, newdata = select(leaf_test, Length, Width))
+
+leaf_lda_newdata$class <- as.vector(leaf_lda_newdata$class)
+leaf_lda_newdata$posterior <- as_tibble(leaf_lda_newdata$posterior)
+
+tibble(
+  Predicted = factor(leaf_lda_newdata$class, levels = c("Pear", "Cherry"))
+  ,Cherry = leaf_lda_newdata$posterior$Cherry
+  ,Pear = leaf_lda_newdata$posterior$Pear
+) %>% 
+  bind_cols(leaf_test) %>% 
+  kable(caption = "LDA New Data Predictions")
 ```
 
 
@@ -308,6 +366,8 @@ leaf_lda_tidy %>%
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull Based on the LDA Predicted Type"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
   )
 ```
 
@@ -342,6 +402,8 @@ leaf_data %>%
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull of that Type"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
   )
 ```
 
@@ -375,6 +437,8 @@ leaf_data %>%
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Contour Plot"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
   )
 ```
 
@@ -395,6 +459,8 @@ leaf_data %>%
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with a Contour Plot of that Type"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
     ,colour = "Type"
   )
 ```
@@ -476,7 +542,21 @@ leaf_qda <-
     ,cv = TRUE
   )
 
-leaf_qda
+leaf_qda$prior %>% 
+  as.data.frame() %>% 
+  rownames_to_column() %>% 
+  kable(
+    digits = 4
+    ,col.names = c("Type", "Probability")
+    ,caption = "QDA Prior Probabilities"
+  )
+
+leaf_qda$mean %>% 
+  kable(
+    digits = 4
+    ,caption = "QDA Group Means"
+  )
+
 
 leaf_qda_pred <- predict(leaf_qda, newdata = select(leaf_data, Length, Width))
 
@@ -499,7 +579,9 @@ leaf_qda_tidy <-
     `Number By Predicted` = 1:length(Predicted)
   ) %>% 
   ungroup()
+```
 
+```{r QDA Results}
 leaf_qda_tidy %>% 
   select(
     Predicted
@@ -510,19 +592,55 @@ leaf_qda_tidy %>%
     ,`Pear Probability` = Pear
   ) %>% 
   mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
-  kable(digits = 4, caption = "blarg")
+  filter(!`Correct Prediction`) %>% 
+  kable(digits = 4, caption = "QDA Misclassification Results")
 
+leaf_qda_confusion <- confusionMatrix(leaf_lda_tidy$Predicted, leaf_lda_tidy$Actual)
+
+kable(
+  leaf_qda_confusion$table
+  ,caption = "QDA Confusion Matrix"
+)
+
+kable(
+  leaf_qda_confusion$byClass
+  ,caption = "QDA Confusion Matrix Stats"
+)
 ```
 
 
 ## New Data
-```{r New Data}
-predict(leaf_qda, newdata = select(leaf_test, Length, Width))
+```{r New Data QDA}
+leaf_qda_newdata <- predict(leaf_qda, newdata = select(leaf_test, Length, Width))
+
+leaf_qda_newdata$class <- as.vector(leaf_qda_newdata$class)
+leaf_qda_newdata$posterior <- as_tibble(leaf_qda_newdata$posterior)
+
+tibble(
+  Predicted = factor(leaf_qda_newdata$class, levels = c("Pear", "Cherry"))
+  ,Cherry = leaf_qda_newdata$posterior$Cherry
+  ,Pear = leaf_qda_newdata$posterior$Pear
+) %>% 
+  bind_cols(leaf_test) %>% 
+  kable(caption = "QDA New Data Predictions")
+```
+
+```{r QDA ROC}
+leaf_qda_tidy %>% 
+  roc(
+    Actual ~ Cherry
+    ,data = .
+  ) %>% 
+  ggroc() +
+  labs(
+    title = "Figure XX: ROC Curve"
+    ,subtitle = "Based on the QDA Model"
+  )
 ```
 
 
 ## Observation Space
-```{r Obs Space qda}
+```{r Obs Space QDA}
 leaf_qda_tidy %>% 
   ggplot(
     aes(
@@ -561,55 +679,177 @@ leaf_qda_tidy %>%
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull Based on the QDA Predicted Type"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
   )
 ```
+
 
 
 
 # Classification Procedure (GLM)
 ## Training Data
-```{r Logit}
+```{r GLM}
 leaf_train_control <- trainControl(method = "LOOCV")
-# leaf_logit <- 
-#   leaf_data %>% 
-#   select(Type, Length, Width) %>% 
-#   train(
-#     Type ~ Length + Width
-#     ,data = .
-#     ,trControl = leaf_train_control
-#     ,method = "glm"
-#   )
 leaf_logit <-
-  leaf_data %>% 
-  glm(
+  leaf_data %>%
+  select(Type, Length, Width) %>%
+  train(
     Type ~ Length + Width
     ,data = .
-    ,family = binomial
+    ,trControl = leaf_train_control
+    ,method = "glm"
   )
-summary(leaf_logit)
 
+leaf_logit %>% 
+  summary() %>% 
+  pander()
+
+leaf_logit_pred <- 
+  list(
+    class = predict(leaf_logit, type = "raw")
+    ,posterior = predict(leaf_logit, type = "prob")
+  )
+
+leaf_logit_pred$class <- as.vector(leaf_logit_pred$class)
+leaf_logit_pred$posterior <- as_tibble(leaf_logit_pred$posterior)
+
+leaf_logit_tidy <-
+  tibble(
+    Predicted = factor(leaf_logit_pred$class, levels = c("Pear", "Cherry"))
+    ,Cherry = leaf_logit_pred$posterior$Cherry
+    ,Pear = leaf_logit_pred$posterior$Pear
+  ) %>% 
+  bind_cols(leaf_data) %>% 
+  rename(
+    Actual = Type
+    ,`Number By Actual` = `Number By Type`
+  ) %>%
+  group_by(Predicted) %>% 
+  mutate(
+    `Number By Predicted` = 1:length(Predicted)
+  ) %>% 
+  ungroup()
+```
+
+```{r GLM Results}
+leaf_logit_tidy %>% 
+  select(
+    Predicted
+    ,Actual
+    ,Length
+    ,Width
+    ,`Cherry Probability` = Cherry
+    ,`Pear Probability` = Pear
+  ) %>% 
+  mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
+  filter(!`Correct Prediction`) %>% 
+  kable(digits = 4, caption = "Logit Misclassification Results")
+
+leaf_logit_confusion <- confusionMatrix(leaf_lda_tidy$Predicted, leaf_lda_tidy$Actual)
+
+kable(
+  leaf_logit_confusion$table
+  ,caption = "Logit Confusion Matrix"
+)
+
+kable(
+  leaf_logit_confusion$byClass
+  ,caption = "Logit Confusion Matrix Stats"
+)
+```
+
+```{r GLM ROC}
 leaf_data %>% 
-  bind_cols(tibble(Prob = predict(leaf_logit, type = "response"))) %>% 
+  bind_cols(tibble(Prob = predict(leaf_logit, type = "prob")$Cherry)) %>% 
   roc(
     Type ~ Prob
     ,data = .
   ) %>% 
-  ggroc()
+  ggroc() +
+  labs(
+    title = "Figure XX: ROC Curve"
+    ,subtitle = "Based on the Logit Model"
+  )
 ```
 
 
 ## New Data
-
+```{r New Data GLM}
+tibble(
+  Predicted = predict(object = leaf_logit, newdata = leaf_test, type = "raw")
+  ,`Cherry Probability` = predict(object = leaf_logit, newdata = leaf_test, type = "prob")$Cherry
+  ,`Pear Probability` = predict(object = leaf_logit, newdata = leaf_test, type = "prob")$Pear
+) %>% 
+  bind_cols(leaf_test) %>% 
+  kable(caption = "Logit New Data Predictions")
+```
 
 
 ## Observation Space
-
+```{r Obs Space GLM}
+leaf_logit_tidy %>% 
+  ggplot(
+    aes(
+      x = Width
+      ,y = Length
+      ,colour = Predicted
+    )
+  ) +
+  geom_polygon(
+    data =
+      leaf_logit_tidy %>%
+      split(.$Predicted) %>%
+      map(~ select(., Width, Length)) %>%
+      map(~ chull(.)) %>%
+      map(as_tibble) %>%
+      bind_rows(.id = "Predicted") %>%
+      mutate(Predicted = factor(Predicted, levels = c("Pear", "Cherry"))) %>%
+      inner_join(
+        leaf_qda_tidy
+        ,by =
+          c(
+            "value" = "Number By Predicted"
+            ,"Predicted" = "Predicted"
+          )
+      )
+    ,alpha = 0.1
+  ) +
+  geom_point(
+    aes(shape = Actual)
+    ,size = 2
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(
+    title = "Figure XX: Length vs Width Scatter Plot"
+    ,subtitle = "Overlayed with the Convex Hull Based on the Logit Predicted Type"
+    ,x = "Width (cm)"
+    ,y = "Length (cm)"
+  )
+```
 
 
 # Conclusion
 
+
+
 # Appendix
-## References
+## Appendix A
+```{r Appendix A}
+leaf_data %>% 
+  select(
+    `Number By Type`
+    ,Type
+    ,Length
+    ,Width
+  ) %>% 
+  kable(caption = "Data")
+```
+
+# References
 [1] The Parts of a Leaf. (17, October 30). Retrieved March 20, 18, from http://www.robinsonlibrary.com/science/botany/anatomy/leafparts.htm
 [2] Britannica, T. E. (2016, November 11). Cherry. Retrieved March 20, 2018, from https://www.britannica.com/plant/cherry
 
