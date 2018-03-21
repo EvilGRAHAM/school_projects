@@ -183,8 +183,7 @@ leaf_data %>%
   summary() %>% 
   kable()
 ```
-
-
+In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
 
 # Classification Procedure
 ## Training Data
@@ -203,9 +202,11 @@ leaf_data %>%
       x = Width
       ,y = Length
       ,colour = Type
+      ,label = `Number By Type`
     )
   ) + 
-  geom_point() +
+  # geom_point() +
+  geom_text() +
   scale_colour_brewer(
     type = "qual"
     ,palette = "Set2"
