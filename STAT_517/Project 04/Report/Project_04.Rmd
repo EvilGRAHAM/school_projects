@@ -23,6 +23,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(pander, warn.conflicts = FALSE, quietly = TRUE)
 library(knitr, warn.conflicts = FALSE, quietly = TRUE)
 library(MASS, warn.conflicts = FALSE, quietly = TRUE)
+library(pROC, warn.conflicts = FALSE, quietly = TRUE)
+library(caret, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
 library(magrittr, warn.conflicts = FALSE, quietly = TRUE)
 library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
@@ -78,57 +80,52 @@ geom_cor <- function(data, ...){
     )
 }
 
-dens_gen <- function(data, leaf_type, newdata){
-  data <- 
-    data %>% 
-    filter(Type == leaf_type)
+ggroc <- function(roc, showAUC = TRUE, interval = 0.2, breaks = seq(0, 1, interval)){
+  require(pROC)
+  if(class(roc) != "roc") simpleError("Please provide roc object from pROC package")
   
-  leaf_density <- kde2d(x = data$Length, y = data$Width, n = 50)#nrow(leaf_data))
-
-  names(leaf_density) <- c(measurements, "Density")
-  rownames(leaf_density$Density) <- leaf_density$Length
-  colnames(leaf_density$Density) <- leaf_density$Width
-
-  newdata <-
-    newdata %>%
-    bind_cols(
-      newdata$Length %>%
-        map_dbl(
-          .f = function(x) leaf_density$Length[which(abs(leaf_density$Length - x)==min(abs(leaf_density$Length - x)))]
-        ) %>%
-        as_tibble() %>%
-        rename(`Closest Length` = value)
-
-      ,leaf_test$Width %>%
-        map_dbl(
-          function(x) leaf_density$Width[which(abs(leaf_density$Width - x)==min(abs(leaf_density$Width - x)))]
-        ) %>%
-        as_tibble() %>%
-        rename(`Closest Width` = value)
-    ) %>%
-    mutate(
-      `Closest Length` = round(`Closest Length`, 4)
-      ,`Closest Width` = round(`Closest Width`, 4)
+  plot_data <- 
+    data.frame(
+      plotx <- rev(roc$specificities)
+      ,ploty <- rev(roc$sensitivities)
     )
-
-  leaf_density_tidy <-
-    leaf_density$Density %>%
-    as.data.frame() %>%
-    rownames_to_column() %>%
-    as_tibble() %>%
-    rename(Length = rowname) %>%
-    gather(
-      key = Width
-      ,value = Density
-      ,-Length
-    ) %>%
-    mutate_all(as.numeric) %>%
-    round(4)
-
-  leaf_density_tidy %>%
-    filter(
-      Length %in% newdata$`Closest Length`
-      ,Width %in% newdata$`Closest Width`
+  
+  plot_data %>% 
+    ggplot(
+      aes(
+        x = plotx
+        ,y = ploty
+      )
+    ) +
+    geom_segment(
+      aes(
+        x = 0
+        ,y = 1
+        ,xend = 1
+        ,yend = 0
+      )
+      ,alpha = 0.5
+    ) + 
+    geom_step() +
+    scale_x_reverse(
+      name = "Specificity"
+      ,limits = c(1, 0)
+      ,breaks = breaks
+      ,expand = c(0.001,0.001)
+    ) + 
+    scale_y_continuous(
+      name = "Sensitivity"
+      ,limits = c(0, 1)
+      ,breaks = breaks
+      ,expand = c(0.001, 0.001)
+    ) +
+    coord_equal() + 
+    annotate(
+      geom = "text"
+      ,x = 0.05 + interval/2
+      ,y = interval/2
+      ,vjust = 0
+      ,label = paste("AUC =", sprintf("%.3f",roc$auc))
     )
 }
 
@@ -193,7 +190,7 @@ leaf_data %>%
 
 In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
 
-```{r Obs Space 01}
+```{r Scatter Plot}
 leaf_data %>% 
   ggplot(
     aes(
@@ -212,11 +209,11 @@ leaf_data %>%
   labs(title = "Figure XX: Length vs Width Scatter Plot")
 ```
 
-# Classification Procedure
+# Classification Procedure (LDA)
 ## Training Data
 ```{r LDA}
 leaf_lda <- 
-  leaf_data %>% 
+  leaf_data %>%
   lda(
     Type ~ Length + Width
     ,data = .
@@ -225,7 +222,6 @@ leaf_lda <-
 
 leaf_lda
 
-predict(leaf_lda, newdata = select(leaf_test, Length, Width))
 leaf_lda_pred <- predict(leaf_lda, newdata = select(leaf_data, Length, Width))
 
 leaf_lda_pred$class <- as.vector(leaf_lda_pred$class)
@@ -250,6 +246,29 @@ leaf_lda_tidy <-
   ) %>% 
   ungroup()
 
+leaf_lda_tidy %>% 
+  select(
+    Predicted
+    ,Actual
+    ,Length
+    ,Width
+    ,`Cherry Probability` = Cherry
+    ,`Pear Probability` = Pear
+  ) %>% 
+  mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
+  kable(digits = 4, caption = "blarg")
+
+```
+
+
+## New Data
+```{r New Data foo}
+predict(leaf_lda, newdata = select(leaf_test, Length, Width))
+```
+
+
+## Observation Space
+```{r Obs Space LDA}
 leaf_lda_tidy %>% 
   ggplot(
     aes(
@@ -287,30 +306,11 @@ leaf_lda_tidy %>%
   ) +
   labs(
     title = "Figure XX: Length vs Width Scatter Plot"
-    ,subtitle = "Overlayed with the Convex Hull Based on the Predicted Type"
+    ,subtitle = "Overlayed with the Convex Hull Based on the LDA Predicted Type"
   )
-
-leaf_lda_tidy %>% 
-  select(
-    Predicted
-    ,Actual
-    ,Length
-    ,Width
-    ,`Cherry Probability` = Cherry
-    ,`Pear Probability` = Pear
-  ) %>% 
-  mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
-  kable(digits = 4, caption = "blarg")
-
 ```
 
-
-## New Data
-
-
-
-## Observation Space
-```{r Obs Space 03}
+```{r Obs Space Sample}
 leaf_data %>% 
   ggplot(
     aes(
@@ -346,7 +346,7 @@ leaf_data %>%
 
 # Probability Distributions
 ## Contour
-```{r Obs Space 02}
+```{r Contour Type}
 leaf_data %>% 
   ggplot(
     aes(
@@ -375,7 +375,9 @@ leaf_data %>%
     title = "Figure XX: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Contour Plot"
   )
+```
 
+```{r Contour Combined}
 leaf_data %>% 
   ggplot(
     aes(
@@ -396,26 +398,7 @@ leaf_data %>%
   )
 ```
 
-```{r Obs Space 04}
-leaf_data %>% 
-  select(Length, Width) %>% 
-  gather(
-    key = Dimension
-    ,value = Measurement
-  ) %>% 
-  ggplot(aes(x = Measurement, y = ..density..)) +
-  geom_histogram(
-    alpha = 0.5
-    ,binwidth = function(x) 2 * IQR(x) / (length(x)^(1/3))
-  ) +
-  geom_density() +
-  facet_wrap(
-    ~ Dimension
-  ) +
-  labs(title = "Figure XX: Density Plot")
-```
-
-```{r Obs Space 05}
+```{r Density Type}
 leaf_data %>% 
   select(Type, Length, Width) %>% 
   gather(
@@ -437,6 +420,25 @@ leaf_data %>%
     ,palette = "Set2"
   ) +
   labs(title = "Figure XX: Density Plot by Type")
+```
+
+```{r Density Combined}
+leaf_data %>% 
+  select(Length, Width) %>% 
+  gather(
+    key = Dimension
+    ,value = Measurement
+  ) %>% 
+  ggplot(aes(x = Measurement, y = ..density..)) +
+  geom_histogram(
+    alpha = 0.5
+    ,binwidth = function(x) 2 * IQR(x) / (length(x)^(1/3))
+  ) +
+  geom_density() +
+  facet_wrap(
+    ~ Dimension
+  ) +
+  labs(title = "Figure XX: Density Plot")
 ```
 
 
@@ -462,108 +464,145 @@ leaf_data %>%
   kable(caption = "Pear Covariance Matrix")
 ```
 
-```{r Multinom}
-leaf_sample <- 
-  100 %>% 
-  mvrnorm(
-    mu = 
-      (leaf_data %>% 
-         select(Length, Width) %>% 
-         summarize_all(mean) %>% 
-         gather(
-           key = Variable
-           ,value = Value
-         ))$Value
-    ,Sigma = 
-      leaf_data %>% 
-      select(Length, Width) %>%  
-      cov()
+# Classification Procedure (QDA)
+## Training Data
+```{r QDA}
+leaf_qda <- 
+  leaf_data %>%
+  qda(
+    Type ~ Length + Width
+    ,data = .
+    ,cv = TRUE
+  )
+
+leaf_qda
+
+leaf_qda_pred <- predict(leaf_qda, newdata = select(leaf_data, Length, Width))
+
+leaf_qda_pred$class <- as.vector(leaf_qda_pred$class)
+leaf_qda_pred$posterior <- as_tibble(leaf_qda_pred$posterior)
+
+leaf_qda_tidy <-
+  tibble(
+    Predicted = as.factor(leaf_qda_pred$class)
+    ,Cherry = leaf_qda_pred$posterior$Cherry
+    ,Pear = leaf_qda_pred$posterior$Pear
   ) %>% 
-  as_tibble() 
-
-leaf_sample %>% 
-  ggplot(
-    aes(
-      x = Width
-      ,y = Length
-    )
-  ) +
-  geom_density_2d() +
-  labs(title = "Simulated Data (All)")
-
-leaf_sample_cherry <- 
-  100 %>% 
-  mvrnorm(
-    mu = 
-      (leaf_data %>% 
-         filter(Type == "Cherry") %>% 
-         select(Length, Width) %>% 
-         summarize_all(mean) %>% 
-         gather(
-           key = Variable
-           ,value = Value
-         ))$Value
-    ,Sigma = 
-      leaf_data %>% 
-      filter(Type == "Cherry") %>% 
-      select(Length, Width) %>%  
-      cov()
+  bind_cols(leaf_data) %>% 
+  rename(
+    Actual = Type
+    ,`Number By Actual` = `Number By Type`
+  ) %>%
+  group_by(Predicted) %>% 
+  mutate(
+    `Number By Predicted` = 1:length(Predicted)
   ) %>% 
-  as_tibble() 
+  ungroup()
 
-leaf_sample_cherry %>% 
-  ggplot(
-    aes(
-      x = Width
-      ,y = Length
-    )
-  ) +
-  geom_density_2d() +
-  labs(title = "Simulated Data (Cherry)")
-
-leaf_sample_pear <- 
-  100 %>% 
-  mvrnorm(
-    mu = 
-      (leaf_data %>% 
-         filter(Type == "Pear") %>%
-         select(Length, Width) %>% 
-         summarize_all(mean) %>% 
-         gather(
-           key = Variable
-           ,value = Value
-         ))$Value
-    ,Sigma = 
-      leaf_data %>% 
-      filter(Type == "Pear") %>%
-      select(Length, Width) %>%  
-      cov()
+leaf_qda_tidy %>% 
+  select(
+    Predicted
+    ,Actual
+    ,Length
+    ,Width
+    ,`Cherry Probability` = Cherry
+    ,`Pear Probability` = Pear
   ) %>% 
-  as_tibble()
+  mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
+  kable(digits = 4, caption = "blarg")
 
-leaf_sample_pear %>% 
-  ggplot(
-    aes(
-      x = Width
-      ,y = Length
-    )
-  ) +
-  geom_density_2d() +
-  labs(title = "Simulated Data (Pear)")
 ```
 
-```{r Leaf Density}
-leaf_test %>% 
-  kable()
 
-leaf_data %>% 
-  dens_gen(leaf_type = "Cherry", newdata = leaf_test) %>% 
-  kable()
-
-leaf_data %>% 
-  dens_gen(leaf_type = "Pear", newdata = leaf_test) %>% 
-  kable()
+## New Data
+```{r New Data}
+predict(leaf_qda, newdata = select(leaf_test, Length, Width))
 ```
+
+
+## Observation Space
+```{r Obs Space qda}
+leaf_qda_tidy %>% 
+  ggplot(
+    aes(
+      x = Width
+      ,y = Length
+      ,colour = Predicted
+    )
+  ) +
+  geom_polygon(
+    data =
+      leaf_qda_tidy %>%
+      split(.$Predicted) %>%
+      map(~ select(., Width, Length)) %>%
+      map(~ chull(.)) %>%
+      map(as_tibble) %>%
+      bind_rows(.id = "Predicted") %>%
+      mutate(Predicted = as.factor(Predicted)) %>%
+      inner_join(
+        leaf_qda_tidy
+        ,by =
+          c(
+            "value" = "Number By Predicted"
+            ,"Predicted" = "Predicted"
+          )
+      )
+    ,alpha = 0.1
+  ) +
+  geom_point(
+    aes(shape = Actual)
+    ,size = 2
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(
+    title = "Figure XX: Length vs Width Scatter Plot"
+    ,subtitle = "Overlayed with the Convex Hull Based on the QDA Predicted Type"
+  )
+```
+
+
+
+# Classification Procedure (GLM)
+## Training Data
+```{r Logit}
+leaf_train_control <- trainControl(method = "LOOCV")
+# leaf_logit <- 
+#   leaf_data %>% 
+#   select(Type, Length, Width) %>% 
+#   train(
+#     Type ~ Length + Width
+#     ,data = .
+#     ,trControl = leaf_train_control
+#     ,method = "glm"
+#   )
+leaf_logit <-
+  leaf_data %>% 
+  glm(
+    Type ~ Length + Width
+    ,data = .
+    ,family = binomial
+  )
+summary(leaf_logit)
+
+leaf_data %>% 
+  bind_cols(tibble(Prob = predict(leaf_logit, type = "response"))) %>% 
+  roc(
+    Type ~ Prob
+    ,data = .
+  ) %>% 
+  ggroc()
+```
+
+
+## New Data
+
+
+
+## Observation Space
+
 
 
 # Conclusion
