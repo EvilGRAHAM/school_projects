@@ -139,6 +139,13 @@ leaf_data <-
   mutate(Type = as.factor(Type))
 
 measurements <- c("Length", "Width")
+
+leaf_test <-
+  tibble(
+    Number = 1:3
+    ,Length = c(8.2, 5.2, 7.6)
+    ,Width = c(3.2, 3.8, 4.0)
+  )
 ```
 Dr. Steven M. Vamosi
 Associate Dean, Diversity, Equity and Inclusion
@@ -183,11 +190,98 @@ leaf_data %>%
   summary() %>% 
   kable()
 ```
+
 In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
 
 # Classification Procedure
 ## Training Data
+```{r LDA}
+leaf_lda <- 
+  leaf_data %>% 
+  lda(
+    Type ~ Length + Width
+    ,data = .
+    ,cv = TRUE
+  )
 
+predict(leaf_lda, newdata = select(leaf_test, Length, Width))
+leaf_lda_pred <- predict(leaf_lda, newdata = select(leaf_data, Length, Width))
+
+leaf_lda_pred$class <- as.vector(leaf_lda_pred$class)
+leaf_lda_pred$posterior <- as_tibble(leaf_lda_pred$posterior)
+leaf_lda_pred$x <- as.vector(leaf_lda_pred$x)
+
+leaf_lda_tidy <-
+  tibble(
+    Predicted = as.factor(leaf_lda_pred$class)
+    ,Cherry = leaf_lda_pred$posterior$Cherry
+    ,Pear = leaf_lda_pred$posterior$Pear
+    ,LD1 = leaf_lda_pred$x
+  ) %>% 
+  bind_cols(leaf_data) %>% 
+  rename(
+    Actual = Type
+    ,`Number By Actual` = `Number By Type`
+  ) %>%
+  group_by(Predicted) %>% 
+  mutate(
+    `Number By Predicted` = 1:length(Predicted)
+  ) %>% 
+  ungroup()
+
+leaf_lda_tidy %>% 
+  ggplot(
+    aes(
+      x = Width
+      ,y = Length
+      ,colour = Predicted
+    )
+  ) +
+  geom_polygon(
+    data =
+      leaf_lda_tidy %>%
+      split(.$Predicted) %>%
+      map(~ select(., Width, Length)) %>%
+      map(~ chull(.)) %>%
+      map(as_tibble) %>%
+      bind_rows(.id = "Predicted") %>%
+      mutate(Predicted = as.factor(Predicted)) %>%
+      inner_join(
+        leaf_lda_tidy
+        ,by =
+          c(
+            "value" = "Number By Predicted"
+            ,"Predicted" = "Predicted"
+          )
+      )
+    ,alpha = 0.1
+  ) +
+  geom_point(
+    aes(shape = Actual)
+    ,size = 2
+  ) +
+  scale_colour_brewer(
+    type = "qual"
+    ,palette = "Set2"
+  ) +
+  labs(
+    title = "Figure XX: Length vs Width Scatter Plot"
+    ,subtitle = "Overlayed with the Convex Hull Based on the Predicted Type"
+  )
+
+leaf_lda_tidy %>% 
+  select(
+    Predicted
+    ,Actual
+    ,Length
+    ,Width
+    ,`Cherry Probability` = Cherry
+    ,`Pear Probability` = Pear
+  ) %>% 
+  mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
+  kable(digits = 4, caption = "blarg")
+
+```
 
 
 ## New Data
@@ -455,13 +549,6 @@ leaf_sample_pear %>%
 ```
 
 ```{r Leaf Density}
-leaf_test <-
-  tibble(
-    Number = 1:3
-    ,Length = c(8.2, 5.2, 7.6)
-    ,Width = c(3.2, 3.8, 4.0)
-  )
-
 leaf_test %>% 
   kable()
 
