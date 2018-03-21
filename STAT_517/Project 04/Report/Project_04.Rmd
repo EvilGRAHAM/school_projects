@@ -135,6 +135,8 @@ leaf_data <-
   read_csv() %>% 
   mutate(Type = as.factor(Type))
 
+leaf_data$Type <- factor(leaf_data$Type, levels = c("Pear", "Cherry"))
+
 measurements <- c("Length", "Width")
 
 leaf_test <-
@@ -230,7 +232,7 @@ leaf_lda_pred$x <- as.vector(leaf_lda_pred$x)
 
 leaf_lda_tidy <-
   tibble(
-    Predicted = as.factor(leaf_lda_pred$class)
+    Predicted = factor(leaf_lda_pred$class, levels = c("Pear", "Cherry"))
     ,Cherry = leaf_lda_pred$posterior$Cherry
     ,Pear = leaf_lda_pred$posterior$Pear
     ,LD1 = leaf_lda_pred$x
@@ -257,7 +259,6 @@ leaf_lda_tidy %>%
   ) %>% 
   mutate(`Correct Prediction` = if_else(Predicted == Actual, TRUE, FALSE)) %>% 
   kable(digits = 4, caption = "blarg")
-
 ```
 
 
@@ -285,7 +286,7 @@ leaf_lda_tidy %>%
       map(~ chull(.)) %>%
       map(as_tibble) %>%
       bind_rows(.id = "Predicted") %>%
-      mutate(Predicted = as.factor(Predicted)) %>%
+      mutate(Predicted = factor(Predicted, levels = c("Pear", "Cherry"))) %>%
       inner_join(
         leaf_lda_tidy
         ,by =
@@ -329,7 +330,7 @@ leaf_data %>%
         key = Type
         ,value = `Number By Type`
       ) %>% 
-      mutate(Type = as.factor(Type)) %>% 
+      mutate(Type = factor(Type, levels = c("Pear", "Cherry"))) %>% 
       left_join(leaf_data, by = c("Number By Type", "Type"))
     ,alpha = 0.1
   ) +
@@ -484,7 +485,7 @@ leaf_qda_pred$posterior <- as_tibble(leaf_qda_pred$posterior)
 
 leaf_qda_tidy <-
   tibble(
-    Predicted = as.factor(leaf_qda_pred$class)
+    Predicted = factor(leaf_qda_pred$class, levels = c("Pear", "Cherry"))
     ,Cherry = leaf_qda_pred$posterior$Cherry
     ,Pear = leaf_qda_pred$posterior$Pear
   ) %>% 
@@ -538,7 +539,7 @@ leaf_qda_tidy %>%
       map(~ chull(.)) %>%
       map(as_tibble) %>%
       bind_rows(.id = "Predicted") %>%
-      mutate(Predicted = as.factor(Predicted)) %>%
+      mutate(Predicted = factor(Predicted, levels = c("Pear", "Cherry"))) %>%
       inner_join(
         leaf_qda_tidy
         ,by =
