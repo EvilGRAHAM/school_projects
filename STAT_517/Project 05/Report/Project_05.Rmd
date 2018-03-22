@@ -1,0 +1,119 @@
+---
+title: "Snow"
+author: "Kaisa Roggeveen, Scott Graham"
+date: "April 6th, 2018"
+header-includes:
+  - \newcommand{\Prob}{\operatorname{P}}
+  - \newcommand{\E}{\operatorname{E}}
+  - \newcommand{\Var}{\operatorname{Var}}
+  - \newcommand{\Cov}{\operatorname{Cov}}
+  - \newcommand{\se}{\operatorname{se}}
+  - \newcommand{\re}{\operatorname{re}}
+  - \newcommand{\ybar}{{\overline{Y}}}
+  - \newcommand{\phat}{{\hat{p}}}
+  - \newcommand{\that}{{\hat{T}}}
+  - \newcommand{\med}{{\tilde{Y}}}
+  - \newcommand{\logit}{{\operatorname{Logit}}}
+output: 
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pander, warn.conflicts = FALSE, quietly = TRUE)
+library(knitr, warn.conflicts = FALSE, quietly = TRUE)
+library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
+library(ggfortify, warn.conflicts = FALSE, quietly = TRUE)
+
+theme_minimal2 <- theme_minimal() %>%  theme_set()
+theme_minimal2 <-
+  theme_update(
+    panel.border = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+    ,strip.background = element_rect(
+      linetype = "solid"
+      ,colour = "grey92"
+      ,fill = NA
+    )
+  )
+
+# Data Import ----------
+snow_wide <- 
+  "../Data/snow_data.csv" %>% 
+  read_csv()
+
+snow_long <- 
+  snow_wide %>% 
+  gather(
+    key = Gauge
+    ,value = Gain
+    ,-Density
+  ) %>% 
+  mutate(Gauge = as.factor(Gauge))
+```
+
+```{r Stuff}
+snow_wide %>% 
+  kable(caption = "Wide Data")
+
+snow_long %>% 
+  ggplot(
+    aes(
+      x = Gauge
+      ,y = Gain
+      ,colour = Density
+    )
+  ) +
+  geom_point() +
+  facet_grid(
+    ~ Gauge
+    ,scales = "free_x"
+  ) +
+  scale_colour_distiller(
+    type = "seq"
+    ,palette = "OrRd"
+    ,direction = 1
+  ) +
+  theme(
+    axis.text.x = element_blank()
+    ,axis.title.x = element_blank()
+    ,legend.position = "bottom"
+  )
+
+snow_long %>% 
+  ggplot(
+    aes(
+      x = Gauge
+      ,y = Density
+      ,colour = Gain
+    )
+  ) +
+  geom_point() +
+  facet_grid(
+    ~ Gauge
+    ,scales = "free_x"
+  ) +
+  scale_colour_distiller(
+    type = "seq"
+    ,palette = "OrRd"
+    ,direction = 1
+  ) +
+  theme(
+    axis.text.x = element_blank()
+    ,axis.title.x = element_blank()
+    ,legend.position = "bottom"
+  )
+
+snow_lm <- 
+  snow_long %>% 
+  lm(
+    Gain ~ Density + Gauge
+    ,data = .
+  )
+
+summary(snow_lm)
+autoplot(snow_lm)
+```
