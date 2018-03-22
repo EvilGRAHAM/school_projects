@@ -156,16 +156,16 @@ Calgary AB
 T2N 1N4 Canada
 
 # Introduction
-The intent of this paper is to develop a method for classifying leaves as either Cherry or Pear, based on their measured length and width. This method was developed for Dr. Steven Vamosi, a botanist from the Universtiy of Calgary. 
+The intent of this paper is to develop a method for classifying leaves as either Cherry or Pear, based on their measured length and width. This method was developed for Dr. Steven Vamosi, a botanist from the University of Calgary. 
 
 The classification method used was Linear discriminant analysis, developed by R.A Fischer. To .... To take training samples from a sampled population take measurements, from these measurements classification rules are created. This will then be tested against the classifying sample to see if there are any miss classifications.
 
-Cherry and Pear leaves are both leaves from fruit trees. Cherry trees belong to the genus Prunus and Pear trees belong to the genus Pyrus [2],[3]. A common feature amongst the leaves is that they both have a midrib, which is the centreal vein of the leaf which extends along the leaf's centerline. 
+Cherry and Pear leaves are both leaves from fruit trees. Cherry trees belong to the genus Prunus and Pear trees belong to the genus Pyrus [2],[3]. A common feature amongst the leaves is that they both have a midrib, which is the central vein of the leaf which extends along the leaf's center line. 
 
 
 # Data
 ## Measurement Process
-The first step taken in the measurement of the leaves was to give each leaf an identification number based on the species. The method used to meausre the dimensions was to create a box with the minimum length and width in which the entire leaf would be encompassed in the box. 
+The first step taken in the measurement of the leaves was to give each leaf an identification number based on the species. The method used to measure the dimensions was to create a box with the minimum length and width in which the entire leaf would be encompassed in the box. 
 
 To begin creating the sides of the box, a ruler was aligned parallel to the midrib, which is the central vein in the leaf and moved towards the left and the right of the picture until only one point on the leaf remained [1]. From the single point on the side of the leaf, a line was drawn parallel to the midrib of the leaf. 
 
@@ -182,7 +182,7 @@ leaf_data %>%
   kable(caption = "Data Summary")
 ```
 
-In this orginal dataset there are a few issues that need to be ackowledged. The first issues that occured during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outliers, which much larger lengths and widths compared to the other leaves in the set. These outliers included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was streched in either direction.
+In this original data set there are a few issues that need to be acknowledged. The first issues that occurred during the data measurements was the result of the leaves that were distributed as the training sample were images, in which the images were not to scale. This resulted in a few outlines, which much larger lengths and widths compared to the other leaves in the set. These outlines included Pear#12, Cherry#10 and Cherry#5. However, based on the nature of this project in just observing the ratio between the length and width, this should not be affected by the size of the image, unless the image was stretched in either direction.
 
 ```{r Scatter Plot}
 leaf_data %>% 
@@ -200,11 +200,12 @@ leaf_data %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 01: Length vs Width Scatter Plot"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
   )
 ```
+In Figure 01 there is a distinct separation in the data of the cherry and the pear. As mentioned above, the outlines are Cherry#10, Cherry#5 and Pear#12 these outlines appear to follow a similar grouping and therefore they were kept in the data set. The raw data is located in Appendix A.  
 
 # Classification Procedure (LDA)
 ## Training Data
@@ -266,6 +267,10 @@ leaf_lda_tidy <-
   ungroup()
 ```
 
+Tables 2-4 represent the output of a linear discriminant analysis (LDA) done on the raw data. Table 2 represents the prior probabilities of falling in a particular type. The prior probability of being a Pear leaf is `r round(leaf_lda$prior[["Pear"]], 4)`. The prior probability of being a Cherry leaf is `r round(leaf_lda$prior[["Cherry"]], 4)`. 
+
+NOTE INCLUDE LDA COEFFICIENT MEANINGS
+
 ```{r LDA Results}
 leaf_lda_tidy %>% 
   select(
@@ -293,6 +298,12 @@ kable(
 )
 ```
 
+Tables 5-6 are the results from the LDA, in this model six leaves were classifieds, which included three pear and three cherry. Upon examining where these leaves are situated in the scatter plot these leaves are along the boundary lines. 
+
+In the confusion matrix, out of the 12 pear leaves 9 were classified correctly and 3 were classifieds and out of the 16 cherry leaves 13 were classified correctly and 3 were misclassified. 
+
+The sensitivity represents the proportion of predicted pear leaves that were actually pear leaves, which was `r round(leaf_lda_confusion$byClass[["Sensitivity"]], 4)`. The specificity represents the proportion of predicted cherry leaves that were actually cherry leaves, which was `r round(leaf_lda_confusion$byClass[["Specificity"]], 4)`.
+
 ```{r LDA ROC}
 leaf_lda_tidy %>% 
   roc(
@@ -301,13 +312,16 @@ leaf_lda_tidy %>%
   ) %>% 
   ggroc() +
   labs(
-    title = "Figure XX: ROC Curve"
+    title = "Figure 02: ROC Curve"
     ,subtitle = "Based on the LDA Model"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
   )
 ```
 
+The Receiver Operating Characteristic (ROC) Curve represents the matched pairs of Specificity and Sensitivity at different threshold levels. What this means is that for a given data point  we can assign a leaf type based on the estimated probability. We choose a threshold for this assignment, for example anything with a probability of being a cherry leaf of $\geq 0.60$ we would assign a predicted type of cherry, with a threshold of 60\%.
+
+It is important to have an Area Under the Curve (AUC) that approaches one, as this ensures that the ROC curve approaches 1 for both specificity and sensitivity. For the LDA, we have a AUC of `r round(roc(Actual ~ Cherry, data = leaf_lda_tidy)$auc, 4)`, which is pretty good.
 
 ## New Data
 ```{r New Data LDA}
@@ -325,6 +339,7 @@ tibble(
   kable(caption = "LDA New Data Predictions")
 ```
 
+Table 8 represents the predicted lead type based on data that was not originally included in the data set. 
 
 ## Observation Space
 ```{r Obs Space LDA}
@@ -364,12 +379,13 @@ leaf_lda_tidy %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 03: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull Based on the LDA Predicted Type"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
   )
 ```
+The convex hull in Figure 03 represents the region that captures all the points of a given leaf type, and is convex in nature. The convexity ensures that any linear combination of points in the set is still in the set. We can evaluate this on the predicted types given by the LDA to see the separating hyper plane between the two convex sets, as this gives a good approximation of the line used to differentiate between the types by the LDA. As well, by looking at the combination of shape and colour, we can see which points were misclassified as per Table 3.
 
 ```{r Obs Space Sample}
 leaf_data %>% 
@@ -400,12 +416,14 @@ leaf_data %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 04: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull of that Type"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
   )
 ```
+
+This is the convex hall of the raw data, and as you can see there is an overlap which indicates that there is no strict separation in the raw data and therefore it was necessary to conduct the LDA. 
 
 # Probability Distributions
 ## Contour
@@ -435,12 +453,16 @@ leaf_data %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 05: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Contour Plot"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
   )
 ```
+
+Contour plots show the clustering of data for pear and cherry trees. Each contour line represents the same density anywhere along that line. As the contour line density increases so does the steepness of the graph and the probability that a given leaf will have those characteristics. 
+
+In Figure 05, there are two disctrint shapes for the contour plot of pear and cherry leaves, this is due to the different covariance matrices of the leaves as seen in Table 10 and 11. The pear leaves tended to have a more similar length and width whereas, the cherry leaves tended to have a longer length and a skinnier width.  
 
 ```{r Contour Combined}
 leaf_data %>% 
@@ -457,13 +479,15 @@ leaf_data %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 06: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with a Contour Plot of that Type"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
     ,colour = "Type"
   )
 ```
+
+Figure 6 is the combined contour plot of the raw data. In this contour plot there is potential bimodality, as seen with the two peaks in the contour plot. However, these peaks fall along the diagonal and not along the vertical or horizontal axises, which indcates that the bimodality is shared between the length and the width.   
 
 ```{r Density Type}
 leaf_data %>% 
@@ -486,8 +510,10 @@ leaf_data %>%
     type = "qual"
     ,palette = "Set2"
   ) +
-  labs(title = "Figure XX: Density Plot by Type")
+  labs(title = "Figure 07: Density Plot by Type")
 ```
+
+
 
 ```{r Density Combined}
 leaf_data %>% 
@@ -505,9 +531,10 @@ leaf_data %>%
   facet_wrap(
     ~ Dimension
   ) +
-  labs(title = "Figure XX: Density Plot")
+  labs(title = "Figure 08: Density Plot")
 ```
 
+Figure 8 shows the bimodality of the data for both the length and the width. The bimodaility of the data is more prominent in the length than in the width, which becomes especially apparent when you split it up by type. 
 
 ## Covariance Matrix
 ```{r Covariance Matrix Combined}
@@ -518,20 +545,30 @@ leaf_data %>%
 ```
 
 ```{r Covariance Matrix Seperate}
-leaf_data %>% 
+leaf_cov_cherry <- 
+  leaf_data %>% 
   filter(Type == "Cherry") %>% 
   select(Length, Width) %>% 
-  cov() %>% 
+  cov() 
+leaf_cov_cherry %>% 
   kable(caption = "Cherry Covariance Matrix")
 
-leaf_data %>% 
+leaf_cov_pear <-
+  leaf_data %>% 
   filter(Type == "Pear") %>% 
   select(Length, Width) %>% 
-  cov() %>% 
+  cov() 
+leaf_cov_pear%>% 
   kable(caption = "Pear Covariance Matrix")
+
+sqrt(sum((leaf_cov_cherry - leaf_cov_pear)^2))
 ```
 
+
+
 # Classification Procedure (QDA)
+The difference between LDA and Quadratic Discriminat Analysis (QDA) is that QDA doesn't rely on the assumption that both classes of data share a covariance matrix, which is a crucial assumption in LDA. This allows us to perform analysis on data where this assumption may not hold in exchange for an increased variance. As well, it doesn't require the classification rule to be linear, but instead can be a quadratic function.
+
 ## Training Data
 ```{r QDA}
 leaf_qda <- 
@@ -581,6 +618,8 @@ leaf_qda_tidy <-
   ungroup()
 ```
 
+The prior probability of being a Pear leaf is `r round(leaf_qda$prior[["Pear"]], 4)`. The prior probability of being a Cherry leaf is `r round(leaf_qda$prior[["Cherry"]], 4)`. 
+
 ```{r QDA Results}
 leaf_qda_tidy %>% 
   select(
@@ -608,6 +647,12 @@ kable(
 )
 ```
 
+Tables 12-14 are the results from the QDA, in this model six leaves were classifieds, which included three pear and three cherry. 
+
+In the confusion matrix, out of the 12 pear leaves 9 were classified correctly and 3 were classifieds and out of the 16 cherry leaves 13 were classified correctly and 3 were misclassified. 
+
+The sensitivity represents the proportion of predicted pear leaves that were actually pear leaves, which was `r round(leaf_qda_confusion$byClass[["Sensitivity"]], 4)`. The specificity represents the proportion of predicted cherry leaves that were actually cherry leaves, which was `r round(leaf_qda_confusion$byClass[["Specificity"]], 4)`.
+
 
 ## New Data
 ```{r New Data QDA}
@@ -625,6 +670,8 @@ tibble(
   kable(caption = "QDA New Data Predictions")
 ```
 
+Table 17 represents the predicted lead type based on data that was not originally included in the data set. 
+
 ```{r QDA ROC}
 leaf_qda_tidy %>% 
   roc(
@@ -633,11 +680,12 @@ leaf_qda_tidy %>%
   ) %>% 
   ggroc() +
   labs(
-    title = "Figure XX: ROC Curve"
+    title = "Figure O9: ROC Curve"
     ,subtitle = "Based on the QDA Model"
   )
 ```
 
+For the QDA, we have a AUC of `r round(roc(Actual ~ Cherry, data = leaf_qda_tidy)$auc, 4)`, which is better than our LDA model.
 
 ## Observation Space
 ```{r Obs Space QDA}
@@ -684,7 +732,9 @@ leaf_qda_tidy %>%
   )
 ```
 
+The convex hulls look identical to that described in the LDA section, due to the fact that the classification was identical between the two models.
 
+SCOTTTTTTTTTTY
 
 
 # Classification Procedure (GLM)
@@ -824,7 +874,7 @@ leaf_logit_tidy %>%
     ,palette = "Set2"
   ) +
   labs(
-    title = "Figure XX: Length vs Width Scatter Plot"
+    title = "Figure 09: Length vs Width Scatter Plot"
     ,subtitle = "Overlayed with the Convex Hull Based on the Logit Predicted Type"
     ,x = "Width (cm)"
     ,y = "Length (cm)"
@@ -832,8 +882,10 @@ leaf_logit_tidy %>%
 ```
 
 
+
 # Conclusion
 
+Based on these models, the best model is the LDA, which offers the simplest model for ease of interpretation. All the model perform at a similar level of accurracy, in terms of their precision, specificity, and sensitvity, and AUC. The LDA model is a relatively simple model to interpret as it has a intuitive geometric interpretation that is accessible to those with a limited statistics background. As such it is our recommended model to use for this task.
 
 
 # Appendix
@@ -851,6 +903,7 @@ leaf_data %>%
 
 # References
 [1] The Parts of a Leaf. (17, October 30). Retrieved March 20, 18, from http://www.robinsonlibrary.com/science/botany/anatomy/leafparts.htm
+
 [2] Britannica, T. E. (2016, November 11). Cherry. Retrieved March 20, 2018, from https://www.britannica.com/plant/cherry
 
 [3] Britannica, T. E. (2015, May 13). Pear. Retrieved March 20, 2018, from https://www.britannica.com/plant/pear
