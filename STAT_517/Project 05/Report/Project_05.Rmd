@@ -107,13 +107,49 @@ snow_long %>%
     ,legend.position = "bottom"
   )
 
-snow_lm <- 
-  snow_long %>% 
+snow_long_train <- 
+  snow_long %>%
+  filter(Gauge %in% c("G 01", "G 02", "G 03"))
+
+snow_long_valid <-
+  snow_long %>%
+  filter(!(Gauge %in% c("G 01", "G 02", "G 03")))
+
+snow_long_train %>% 
+  ggplot(
+    aes(
+      x = Density
+      ,y = log(Gain)
+    )
+  ) +
+  geom_smooth(method = "lm") +
+  geom_point()
+
+snow_lm <-
+  snow_long_train %>% 
   lm(
-    Gain ~ Density + Gauge
+      log(Gain) ~ Density# + Gauge
     ,data = .
   )
 
 summary(snow_lm)
 autoplot(snow_lm)
+
+snow_summ_valid <-
+  snow_long_valid %>% 
+  group_by(Density) %>% 
+  summarize(`Mean Gain` = mean(Gain)) %>% 
+  mutate(
+    `Est Density` = (log(`Mean Gain`) - snow_lm$coefficients[["(Intercept)"]]) / snow_lm$coefficients[["Density"]]
+  )
+snow_summ_valid
+
+snow_long_train %>% 
+  ggplot(aes(x = Density, y = log(Gain))) +
+  geom_hline(
+    data = snow_summ_valid
+    ,aes(yintercept = log(`Mean Gain`))
+  ) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_point()
 ```
