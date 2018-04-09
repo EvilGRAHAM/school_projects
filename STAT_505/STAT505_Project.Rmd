@@ -33,6 +33,39 @@ library(gridExtra, warn.conflicts = FALSE, quietly = TRUE)
 source("ggacf.R", echo = FALSE)
 source("ggcor.R", echo = FALSE)
 
+log_ret_to_price <- function(historical_data, forecast_data){
+  historical_data %>% 
+    bind_rows(
+      bind_cols(
+        Date = 
+          historical_data %>% 
+          filter(
+            Date == max(Date)
+            ,Type == "Forecast"
+          ) %>% 
+          .$Date + months(1)
+        ,(
+          historical_data %>% 
+            filter(
+              Date == max(Date)
+              ,Type == "Forecast"
+            ) %>%
+            select(-Date, -Type) %>% 
+            mutate_all(funs(./.*Mean))
+        ) * 
+          (
+            forecast_data %>% 
+              filter(
+                Date == max(historical_data$Date) + months(1)
+              ) %>% 
+              select(-Date, -Type) %>%
+              exp()
+          )
+        ,Type = "Forecast"
+      )
+    )
+}
+
 num_months_name <- 
   tibble(
     Name =
@@ -121,196 +154,195 @@ banana_price <-
     ,by = c("Month" = "Num")
   ) %>% 
   rename(`Month Name` = Name)
+
+num_periods_ahead <- 12*3
 ```
 
 # Abstract
 
 # Introduction
-(Data Collection)
-(Introduce where we got banana data, talk about how bananas are important)
-(Background info about bananas and possible reasons why the price is the price?)
 
+The intent of this paper is to forecast the future price of Bananas. This paper uses time-series modeling techniques.The data was collected from webpage fred.stlouisfed.org and ranges from January 1998 to December 2017 [1].
+
+Bananas are a type of fruit that is consumed worldwide for its nutritional value and the availablility of Bananas throughout the year [2]. The main type banana that is exported is the Cavendish Banana [2]. Though bananas can be frozen and used for baking, they are most commonlye consumed fresh and therefore it is important for suppliers to always have a new supply of bananas for their customers [2].
+
+There are a few important considerations when evaluating the price of bananas, the first is evaluating if there exists a seasonal component and a trend component. These components might occur because Banana plants only fruit once in their lifetime, and the banana crop is mostly exported [2]. When banana plants fruit they only produce about 50 to 150 bananas each, once a banana plant has fruited, it's trunk is cut down to the ground and will be replaced by a rhizome where it will take between 9 to 12 months for the plant to fruit again [2],[3]. Therefore, this paper will be evaluating the seasonal components and the trend components of the price of bananas overtime.
 
 # Methodology
 ## Original Time Series Plot
-To begin analysis of the stock price of Bananas a plot of the price and the date was created, and is shown in Figure 01.
+To begin analysis of the stock price of Bananas a plot of the price and the date was created, and is shown in Figure 1.
 
 
-In Figure 01, there appears to be a seasonal effect on the price of bananas. This is noticed because of the rythmic spikes and drops in the price that appears to follow a similar trend throughout multiple years. 
+In Figure 1, there appears to be a seasonal effect on the price of bananas. This is noticed because of the rythmic spikes and drops in the price that appears to follow a similar trend throughout multiple years.
 
-A linear regression line was fitted to the data which has positive slope indicating that there is likely an increasing trend in the price of bananas since 1998.  
+A linear regression line was fitted to the data which has positive slope indicating that there is likely an increasing trend in the price of bananas since 1997.
 
-A local regression (loess) was fitted to the data. This adds  a smooth curve to all of the data. The loess curve is used to test the fit of our linear regression model, where the best model would have a loess model similar to the linear regression model. Therefore, further analysis is required. 
+A local regression (loess) curve was fitted to the data. This adds a smooth curve to all of the data. The loess curve is used to gauge the fit of the linear regression model, where a good model would have a loess model similar to the linear regression model. Since the loess model and the linear regression model deviate significantly, it requires further analysis and adjustments to the data.
 
 ```{r Original TS}
-banana_price %>% 
-  ggplot(
-    aes(
-      x = Date
-      ,y = Price
-    )
-  ) +
-  geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
-  geom_line() +
-  labs(
-    title = "Figure 01: Banana Price"
-    ,y = "Price (USD/Metric Ton)"
-  )
+banana_price %>%
+ggplot(
+aes(
+x = Date
+,y = Price
+)
+) +
+geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
+geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
+geom_line() +
+labs(
+title = "Figure 01: Banana Price"
+,y = "Price (USD/Metric Ton)"
+)
 ```
- 
+
 
 ## Orginial Seasonal Plot
 
 ```{r Seasonal Price by Year}
-banana_price %>% 
-  group_by(Season, Year) %>% 
-  summarize(`Mean Price` = mean(Price)) %>% 
-  ggplot(
-    aes(
-      x = Year
-      ,y = `Mean Price`
-      ,colour = Season
-    )
-  ) +
-  geom_line() +
-  scale_color_brewer(
-    type = "seq"
-    ,palette = "Set2"
-  ) +
-  labs(
-    title = "Figure 02: Seasonal Mean Banana Price"
-    ,y = "Price (USD/Metric Ton)"
-    ,colour = "Month"
-  )
+banana_price %>%
+group_by(Season, Year) %>%
+summarize(`Mean Price` = mean(Price)) %>%
+ggplot(
+aes(
+x = Year
+,y = `Mean Price`
+,colour = Season
+)
+) +
+geom_line() +
+scale_color_brewer(
+type = "seq"
+,palette = "Set2"
+) +
+labs(
+title = "Figure 02: Seasonal Mean Banana Price"
+,y = "Price (USD/Metric Ton)"
+,colour = "Month"
+)
 ```
 
-In Figure 02, the price of bananas was over each year, and seperated by season.  In Figure 02, each month appears to follow a similar overall increasing trend in the price from 1998. In the graph, the spring and winter months are the highest priced months over the time frame and the summer and fall months follow a trend of being the lowest priced over the time frame. This indicates that over the time-series there is likely a seasonal component to this data and this is investigated further in Figure 03.  
-
+In Figure 02, the price of bananas was observed over each year, and stratified by the four seasons. From the seasonal plot, each month appears to follow a similar overall increasing trend in the price from 1997. In the graph, the spring months are the highest priced months over the time frame while fall months generally have the lowest prices over the time period. The winter and the summer months are generally in between. This indicates that over the time-series there is likely a seasonal component to this data, which is investigated further in Figure 03.
 
 
 ```{r Price Violin Plot}
 banana_price %>%
-  ggplot(
-    aes(
-      x = Season
-      ,y = Price
-    )
-  ) +
-  geom_violin(fill = NA) +
-  geom_boxplot(fill = NA, width = 0.1, outlier.colour = NA) +
-  geom_jitter(aes(colour = Year)) +
-  facet_wrap(
-    ~ Season
-    ,nrow = 1
-    ,scales = "free_x"
-  ) +
-  scale_color_distiller(
-    type = "seq"
-    ,palette = "RdYlBu"
-  ) +
-  labs(
-    title = "Figure 03: Seasonal Banana Price Violin Plot"
-    ,y = "Price (USD/Metric Ton)"
-  ) +
-  theme(
-    axis.text.x = element_blank()
-    ,axis.title.x = element_blank()
-  )
+ggplot(
+aes(
+x = Season
+,y = Price
+)
+) +
+geom_violin(fill = NA) +
+geom_boxplot(fill = NA, width = 0.1, outlier.colour = NA) +
+geom_jitter(aes(colour = Year)) +
+facet_wrap(
+~ Season
+,nrow = 1
+,scales = "free_x"
+) +
+scale_color_distiller(
+type = "seq"
+,palette = "RdYlBu"
+) +
+labs(
+title = "Figure 03: Seasonal Banana Price Violin Plot"
+,y = "Price (USD/Metric Ton)"
+) +
+theme(
+axis.text.x = element_blank()
+,axis.title.x = element_blank()
+)
 ```
 
-In Figure 03, violin plots of the price of bananas were separated by the season. Winter included December, January and February, spring included March, April and May, summer included June, July and August and fall included September, October and November. Overall the trend shows that in the mean and the median for the price of bananas in the spring is the highest, and the mean lowest price of bananas happens in the fall. From this, it can be concluded that there is some seasonal affect on the price of bananas.
+In Figure 03, violin plots of the price of bananas were separated by the season. Winter included December, January and February; spring included March, April and May; summer included June, July and August; and fall included September, October and November. Overall the trend shows that the mean and the median for the price of bananas in the spring is the highest, and the mean lowest price of bananas happens in the fall. From this, it can be concluded that there is some seasonal affect on the price of bananas.
 
-Figure 03 also shows the price of bananas and the year as coloured points. These points show an overall trend that the cost of bananas has been increasing since 1998, as we can see the change in the colour from blue (being the earlier years) at the bottom and red (being the later years) at the top. Figure 04 shows this more clearly.
+Figure 03 also shows the price of bananas and the year as coloured points. These points show an overall trend that the cost of bananas has been increasing since 1998, as we can see the change in the colour from blue (indicating the earlier years) at the bottom and red (indicating the later years) at the top. Figure 04 shows this more clearly.
 
 ```{r Monthly Price by Year}
 banana_price %>%
-  ggplot(
-    aes(
-      x = `Month Name`
-      ,y = Price
-      ,colour = Year
-      ,group = Year
-    )
-  ) +
-  geom_line() +
-  scale_colour_distiller(
-    type = "div"
-    ,palette = "RdYlBu"
-  ) +
-  labs(
-    title = "Figure 04: Banana Price by Month"
-    , y = "Price (USD/Metric Ton)"
-    , x = "Month"
-  )
+ggplot(
+aes(
+x = `Month Name`
+,y = Price
+,colour = Year
+,group = Year
+)
+) +
+geom_line() +
+scale_colour_distiller(
+type = "div"
+,palette = "RdYlBu"
+) +
+labs(
+title = "Figure 04: Banana Price by Month"
+, y = "Price (USD/Metric Ton)"
+, x = "Month"
+)
 ```
-As described in Figure 03, there has been an increase in the price of Bananas over the last twenty years. 
-
-HOW HAS THE PRICE OF BANANAS INCREASED WITH INFLATION?
+According to Figure 04, there has been an increase in the price of Bananas over the last twenty years. Banana prices have approximately doubled between 1998 and 2018, though the prices have been relatively steady in approximately the last 7 years. This may indicate that inflationary effects have been relatively muted since 2010.
 
 
 ## Lagged Scatter Plot
 ```{r Lagged Scatter Plot}
-banana_lagged <- 
-  banana_price %>% 
-  mutate(
-    `Lag 01` = lag(Price, n = 1)
-    ,`Lag 02` = lag(Price, n = 2)
-    ,`Lag 03` = lag(Price, n = 3)
-    ,`Lag 04` = lag(Price, n = 4)
-    ,`Lag 05` = lag(Price, n = 5)
-    ,`Lag 06` = lag(Price, n = 6)
-    ,`Lag 07` = lag(Price, n = 7)
-    ,`Lag 08` = lag(Price, n = 8)
-    ,`Lag 09` = lag(Price, n = 9)
-    ,`Lag 10` = lag(Price, n = 10)
-    ,`Lag 11` = lag(Price, n = 11)
-    ,`Lag 12` = lag(Price, n = 12)
-  ) 
+banana_lagged <-
+banana_price %>%
+mutate(
+`Lag 01` = lag(Price, n = 1)
+,`Lag 02` = lag(Price, n = 2)
+,`Lag 03` = lag(Price, n = 3)
+,`Lag 04` = lag(Price, n = 4)
+,`Lag 05` = lag(Price, n = 5)
+,`Lag 06` = lag(Price, n = 6)
+,`Lag 07` = lag(Price, n = 7)
+,`Lag 08` = lag(Price, n = 8)
+,`Lag 09` = lag(Price, n = 9)
+,`Lag 10` = lag(Price, n = 10)
+,`Lag 11` = lag(Price, n = 11)
+,`Lag 12` = lag(Price, n = 12)
+)
 
-banana_lagged %>% 
-  gather(
-    key = Lag
-    ,value = `Lagged Price`
-    ,-Date
-    ,-Year
-    ,-Month
-    ,-`Month Name`
-    ,-Season
-    ,-Day
-    ,-Price
-    ,-R_a
-  ) %>% 
-  filter(!is.na(`Lagged Price`)) %>% 
-  ggplot(
-    aes(
-      x = Price
-      ,y = `Lagged Price`
-    )
-  ) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
-  facet_wrap(~ Lag) +
-  labs(
-    title = "Figure 05: Lag Scatter Plot"
-    ,x = "Price (USD/Metric Ton)"
-    ,y = "Lagged Price (USD/Metric Ton)"
-  )
+banana_lagged %>%
+gather(
+key = Lag
+,value = `Lagged Price`
+,-Date
+,-Year
+,-Month
+,-`Month Name`
+,-Season
+,-Day
+,-Price
+,-R_a
+) %>%
+filter(!is.na(`Lagged Price`)) %>%
+ggplot(
+aes(
+x = Price
+,y = `Lagged Price`
+)
+) +
+geom_point(alpha = 0.5) +
+geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
+geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
+facet_wrap(~ Lag) +
+labs(
+title = "Figure 05: Lag Scatter Plot"
+,x = "Price (USD/Metric Ton)"
+,y = "Lagged Price (USD/Metric Ton)"
+)
 ```
 
-Figure 05 show the lag plots at each month in our dataset. The lag plots are showing the potential correlation between one lag and the previous lag. In these plots we are comparing the first month to all the oterh months. There appears to be significant correlation in lags 1 through 4, and in lags 4 through 12 the distribution appears to be more random. 
+Figure 05 show the lag plots at each month in our dataset. The lag plots are showing the potential correlation between one lag and the previous lag. In these plots we are comparing the first month to all the oterh months. There appears to be significant correlation in lags 1 through 4, and in lags 4 through 12 the distribution appears to be more random.
 
 ```{r Lagged Correlation}
-banana_lagged %>% 
-  select(`Lag 00` = Price, starts_with("Lag")) %>% 
-  ggcor(lb = 0.7, use = "complete.obs") +
-  labs(title = "Figure 06: Lagged Correlation Plot")
+banana_lagged %>%
+select(`Lag 00` = Price, starts_with("Lag")) %>%
+ggcor(lb = 0.7, use = "complete.obs") +
+labs(title = "Figure 06: Lagged Correlation Plot")
 ```
 
-Figure 06 is a correlation plot between the lags. There is a strong correlation between each lag and itself.
-
-SOMEONE REWRITE THIS
+Figure 06 is a correlation plot between the lags. In general the correlations range from around 0.75 to perfect correlation. It can be seen that the correlation remains very high (between 0.85 and 1) within the first 4 lags, then starts to decrease below 0.8.
 
 ## Autocorrelation Function and Partial Autocorrelation Function
 
@@ -318,153 +350,152 @@ SOMEONE REWRITE THIS
 ggacf(banana_price, col = Price, type = "correlation") + labs(title = "Figure 07: Price ACF")
 ```
 
-Figure 07 is a plot of the Autocorrelation function, which is checking the correlation between a lag and the previous lag. In this case we see a gradual decrease in the spikes along the plot, which might indicate that there is some autoregressive componenet required in the model. 
+Figure 07 is a plot of the Autocorrelation function, which is checking the correlation between a lag and the previous lag. In this case, there is a gradual decrease in the spikes along the plot, which might indicate that there is some autoregressive component required in the model.
 
 ```{r Price PACF}
 ggacf(banana_price, col = Price, type = "partial") + labs(title = "Figure 08: Price PACF")
 ```
 
-In Partial Autocorrelation plot in Figure 08, there is a significant spike at lag 1, folowed by correlations that are mostly not signifcant, therefore it is suspected that this has an autoregressive component. 
+In the Partial Autocorrelation plot in Figure 08, there is a significant spike at lag 1, followed by correlations that are mostly not significant, therefore it is suspected that this has an autoregressive component. Furthermore, there are noticeable spikes approximately every 4 lags, indicating a seasonality component.
 
 ## Transformations
-Since there is a seasonal and trend componenent in the Banana Price dataset, transformations are required. 
+Since there are both seasonal and trend components in the Banana Price dataset, transformations are required. Multiple different transformations were tested on the Banana Price dataset and can be seen in Figure 09. Note that once again the orange line represents the results from fitting a linear regression model while the green line represents the results from fitting a loess regression model.
 
-There were multiple different transformations made on the Banana Price dataset. The first transformation was to take the log of the Banana Price. This transformation did not have a significant impact on removing the trend or the seasonality from the dataset. 
+The first transformation was to take the log of the Banana Price. This transformation did not have a significant impact on removing the trend or the seasonality from the dataset.
 
-The second transformation was using the Box-Cox method in R. Again, the Banana Price data was transformed and there was not a significant reduction in the trend or the seasonality of the dataset. 
+The second transformation was using the Box-Cox method in R. Again, there was not a significant reduction in the trend or the seasonality of the dataset.
 
-The third transformation performed was to change the dataset from the stock price of bananas to the return of the bananas. The new dataset, Banana Return, resulted in a significant reduction in the removal of the trend of the Banana Price
+The third transformation performed was to change the dataset from the stock price of bananas to the return of the bananas. The new dataset, Banana Return, resulted in a significant reduction to the trend of the Banana Price.
 
-Following the inital transformation of the Banana Price to Banana Return a second was applied by taking the log of the Banana Return. This transformation also had a significant effect on the removal of trend in the Banana Return dataset.
+Following the initial transformation of the Banana Price to Banana Return, additional transformations were conducted to further reduce the trend.
 
-A Box-Cox transformation was also performed on the Banana Return dataset, this transformation did not result in signficant removal of the trend in the Banana Return dataset. 
+A transformation was applied by taking the log of the Banana Return. This transformation also had a significant effect on the removal of trend in the Banana Return dataset.
 
-Therefore, due to the ease of interpretation and removal of trend, the Banana Return and the log of Banana Return will be used for further modeling of the Price of Bananas. 
+A Box-Cox transformation was also performed on the Banana Return dataset, this transformation did not result in any significant removal of the trend in the Banana Return dataset.
+
+Therefore, due to the ease of interpretation and removal of trend, the Banana Return and the log of Banana Return will be used for further modeling of the Price of Bananas.
 
 ## Transformation Time-Series Plot
 ```{r Trans TS Plot, fig.height=7}
-banana_price <- 
-  banana_price %>% 
-  mutate(
-    `Log Price` = log(Price)
-    ,`Log Return` = log(1 + R_a)
-    ,`Box Cox Price` = BoxCox(Price, lambda = BoxCox.lambda(Price))
-    ,`Box Cox Return` = BoxCox(Price, lambda = BoxCox.lambda(R_a))
-  )
+banana_price <-
+banana_price %>%
+mutate(
+`Log Price` = log(Price)
+,`Log Return` = log(1 + R_a)
+,`Box Cox Price` = BoxCox(Price, lambda = BoxCox.lambda(Price))
+,`Box Cox Return` = BoxCox(Price, lambda = BoxCox.lambda(R_a))
+)
 
-banana_price %>% 
-  gather(
-    key = Transformation
-    ,value = Value
-    ,-Date
-    ,-Year
-    ,-Month
-    ,-`Month Name`
-    ,-Season
-    ,-Day
-  ) %>% 
-  ggplot(
-    aes(
-      x = Date
-      ,y = Value
-    )
-  ) +
-  geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
-  geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
-  geom_line() +
-  facet_wrap(
-    ~ Transformation
-    ,scales = "free_y"
-    ,ncol = 1
-  ) +
-  labs(title = "Figure 09: Time Series Plot of Transformations")
+banana_price %>%
+gather(
+key = Transformation
+,value = Value
+,-Date
+,-Year
+,-Month
+,-`Month Name`
+,-Season
+,-Day
+) %>%
+ggplot(
+aes(
+x = Date
+,y = Value
+)
+) +
+geom_smooth(method = "loess", se = FALSE, colour = "#66c2a5") +
+geom_smooth(method = "lm", se = FALSE, colour = "#fc8d62") +
+geom_line() +
+facet_wrap(
+~ Transformation
+,scales = "free_y"
+,ncol = 1
+) +
+labs(title = "Figure 09: Time Series Plot of Transformations")
 ```
-
-From Figure XX: Violin plots separating the banana data by season were created. After the transformation the effects of the increasing trend have been removed. This is observed as the data points are not showing the same trend where the earlier years, seen in blue, appeared near the bottom and the later years, seen in red, appeared near the top and the observed pattern is more random. In addtion, the median of the log Banana Return, is more consisistent. 
-
-DOUBLE CHECK THIS, MIGHT NEED TO BE MOVED BELOW THE NEXT FIG
 
 ```{r Seasonal Return on Bananas Violin Plot}
 banana_price %>%
-  select(
-    Year
-    ,Season
-    ,R_a
-    ,`Log Return`
-  ) %>% 
-  gather(
-    key = Transformation
-    ,value = Value
-    ,-Year
-    ,-Season
-  ) %>% 
-  ggplot(
-    aes(
-      x = Season
-      ,y = Value
-    )
-  ) +
-  geom_violin(fill = NA) +
-  geom_boxplot(fill = NA, width = 0.1, outlier.colour = NA) +
-  geom_jitter(aes(colour = Year)) +
-  facet_grid(
-    Transformation ~ Season
-    ,scales = "free_x"
-  ) +
-  scale_color_distiller(
-    type = "seq"
-    ,palette = "RdYlBu"
-  ) +
-  labs(
-    title = "Figure 10: Seasonal Return on Bananas Violin Plot"
-    ,y = "Monthly Return (%)"
-  ) +
-  theme(
-    axis.text.x = element_blank()
-    ,axis.title.x = element_blank()
-  )
+select(
+Year
+,Season
+,R_a
+,`Log Return`
+) %>%
+gather(
+key = Transformation
+,value = Value
+,-Year
+,-Season
+) %>%
+ggplot(
+aes(
+x = Season
+,y = Value
+)
+) +
+geom_violin(fill = NA) +
+geom_boxplot(fill = NA, width = 0.1, outlier.colour = NA) +
+geom_jitter(aes(colour = Year)) +
+facet_grid(
+Transformation ~ Season
+,scales = "free_x"
+) +
+scale_color_distiller(
+type = "seq"
+,palette = "RdYlBu"
+) +
+labs(
+title = "Figure 10: Seasonal Return on Bananas Violin Plot"
+,y = "Monthly Return (%)"
+) +
+theme(
+axis.text.x = element_blank()
+,axis.title.x = element_blank()
+)
 ```
+
+Figure 10 displays violin plots separating the banana data by season. After the transformation the effects of the increasing trend have been removed. This is observed as the data points are not showing the same trend where the earlier years, seen in blue, appeared near the bottom and the later years, seen in red, appeared near the top and the observed pattern is more random. In addition, the median of the log Banana Return, is more consistent, indicating a reduction in seasonal effects.
 
 ```{r Return on Bananas by Month}
 banana_price %>%
-  select(
-    Year
-    ,`Month Name`
-    ,R_a
-    ,`Log Return`
-  ) %>% 
-  gather(
-    key = Transformation
-    ,value = Value
-    ,-Year
-    ,-`Month Name`
-  ) %>% 
-  ggplot(
-    aes(
-      x = `Month Name`
-      ,y = Value
-      ,colour = Year
-      ,group = Year
-    )
-  ) +
-  geom_line() +
-  facet_wrap(
-    ~ Transformation
-    ,ncol = 1
-  ) +
-  scale_colour_distiller(
-    type = "div"
-    ,palette = "RdYlBu"
-  ) +
-  labs(
-    title = "Figure 11: Return on Bananas by Month"
-    , y = "Monthly Return (%)"
-    , x = "Month"
-  )
+select(
+Year
+,`Month Name`
+,R_a
+,`Log Return`
+) %>%
+gather(
+key = Transformation
+,value = Value
+,-Year
+,-`Month Name`
+) %>%
+ggplot(
+aes(
+x = `Month Name`
+,y = Value
+,colour = Year
+,group = Year
+)
+) +
+geom_line() +
+facet_wrap(
+~ Transformation
+,ncol = 1
+) +
+scale_colour_distiller(
+type = "div"
+,palette = "RdYlBu"
+) +
+labs(
+title = "Figure 11: Return on Bananas by Month"
+, y = "Monthly Return (%)"
+, x = "Month"
+)
 ```
 
-
-From Figures 11, the elimination of the trend in the dataset since the gradual increasing trend from the earlier years, in blue, and the later years, in red, is no longer present. 
+From Figure 11, the elimination of the trend in the dataset is apparent since the gradual increasing trend from the earlier years, in blue, and the later years, in red, is no longer present. Additionally, the plot also shows that there is higher variation on return rate during the earlier years compared to the later years.
 
 ## Transformation Autocovariance Function
 
@@ -476,208 +507,818 @@ banana_log_ret_pacf <- ggacf(banana_price, col = `Log Return`, type = "partial")
 grid.arrange(banana_R_a_acf, banana_R_a_pacf, banana_log_ret_acf, banana_log_ret_pacf, top = "Figure 12: ACF & PACF Plots for Return on Bananas")
 ```
 
-Figures XX through to YY allk show a significant correlation at the first lag, followed by correlations that are not significant. This indicates that there is an autoregressive tern in the data. 
+The plots in Figure 12 all show a significant correlation at the first lag, followed by correlations that are not significant.
 
 ## Decomposition of Transformation
 
-To confirm if there exists a trend or seasonal componenent in the Banana Price, the Banana Return and the Log of the Banana Return datasets, the decomposition method was used. 
+To confirm if there exists a trend or seasonal componenent in the Banana Price, the Banana Return and the Log of the Banana Return datasets, the decomposition method was used.
 
 ```{r Decomposition Stats}
-banana_price_decomp <- 
-  banana_price$Price %>% 
-  ts(frequency = 12) %>% 
-  stl(s.window = "periodic")
-banana_ra_decomp <- 
-  banana_price$R_a %>% 
-  ts(frequency = 12) %>% 
-  stl(s.window = "periodic")
-banana_logreturn_decomp <- 
-  banana_price$`Log Return` %>% 
-  ts(frequency = 12) %>% 
-  stl(s.window = "periodic")
+banana_price_decomp <-
+banana_price$Price %>%
+ts(frequency = 12) %>%
+stl(s.window = "periodic")
+banana_ra_decomp <-
+banana_price$R_a %>%
+ts(frequency = 12) %>%
+stl(s.window = "periodic")
+banana_logreturn_decomp <-
+banana_price$`Log Return` %>%
+ts(frequency = 12) %>%
+stl(s.window = "periodic")
 
-banana_price_decomp$time.series %>% 
-  summary() %>% 
-  kable(
-    caption = "Price Decomposition Summary Statistics"
-    ,digits = 4
-    ,col.names = c("Seasonal", "Trend", "Remainder")
-  )
-banana_ra_decomp$time.series %>% 
-  summary() %>% 
-  kable(
-    caption = "Return Decomposition Summary Statistics"
-    ,digits = 4
-    ,col.names = c("Seasonal", "Trend", "Remainder")
-  )
-banana_logreturn_decomp$time.series %>% 
-  summary() %>% 
-  kable(
-    caption = "Log Return Decomposition Summary Statistics"
-    ,digits = 4
-    ,col.names = c("Seasonal", "Trend", "Remainder")
-  )
+banana_price_decomp$time.series %>%
+summary() %>%
+kable(
+caption = "Price Decomposition Summary Statistics"
+,digits = 4
+,col.names = c("Seasonal", "Trend", "Remainder")
+)
+banana_ra_decomp$time.series %>%
+summary() %>%
+kable(
+caption = "Return Decomposition Summary Statistics"
+,digits = 4
+,col.names = c("Seasonal", "Trend", "Remainder")
+)
+banana_logreturn_decomp$time.series %>%
+summary() %>%
+kable(
+caption = "Log Return Decomposition Summary Statistics"
+,digits = 4
+,col.names = c("Seasonal", "Trend", "Remainder")
+)
 ```
 
 
 
 ```{r Price Decomposition Plot}
-banana_price %>% 
-  select(
-    Date
-    ,Year
-    ,Month
-    ,`Month Name`
-    ,Day
-    ,Price
-  ) %>% 
-  bind_cols(
-    banana_price_decomp$time.series %>% 
-      data.frame() %>% 
-      as_tibble() %>% 
-      rename(
-        Remainder = remainder
-        ,Seasonal = seasonal
-        ,Trend = trend
-      )
-  ) %>% 
-  rename(Data = Price) %>% 
-  gather(
-    key = Decomposition
-    ,value = Price
-    ,-Date
-    ,-Year
-    ,-Month
-    ,-`Month Name`
-    ,-Day
-  ) %>% 
-  mutate(
-    Decomposition = factor(Decomposition, levels = c("Data", "Trend", "Seasonal", "Remainder"))
-  ) %>% 
-  ggplot(
-    aes(
-      x = Date
-      ,y = Price
-    )
-  ) +
-  geom_line() +
-  facet_wrap(
-    ~ Decomposition
-    ,ncol = 1
-    ,scales = "free_y"
-  ) +
-  labs(
-    title = "Figure 13: Banana Prices Decomposition"
-    ,y = "Price (USD/Metric Ton)"
-  )
+banana_price %>%
+select(
+Date
+,Year
+,Month
+,`Month Name`
+,Day
+,Price
+) %>%
+bind_cols(
+banana_price_decomp$time.series %>%
+data.frame() %>%
+as_tibble() %>%
+rename(
+Remainder = remainder
+,Seasonal = seasonal
+,Trend = trend
+)
+) %>%
+rename(Data = Price) %>%
+gather(
+key = Decomposition
+,value = Price
+,-Date
+,-Year
+,-Month
+,-`Month Name`
+,-Day
+) %>%
+mutate(
+Decomposition = factor(Decomposition, levels = c("Data", "Trend", "Seasonal", "Remainder"))
+) %>%
+ggplot(
+aes(
+x = Date
+,y = Price
+)
+) +
+geom_line() +
+facet_wrap(
+~ Decomposition
+,ncol = 1
+,scales = "free_y"
+) +
+labs(
+title = "Figure 13: Banana Prices Decomposition"
+,y = "Price (USD/Metric Ton)"
+)
 ```
 
-In Figure XX: The remainder or random data and the Banana Price data do not have a similar trend. This indicates that there is some seasonal or trend component in the dataset. The smoothed trendline shows an increasing pattern and the seasonality also has a regular pattern. 
+From figure 13, we see that the mean seasonal effect is 0.0002305\%, the mean trend effect is 0.001110\%, and the mean remainder effect is 0.0002209.
 
 ```{r Log Return Decomposition Plot}
-banana_price %>% 
-  select(
-    Date
-    ,Year
-    ,Month
-    ,`Month Name`
-    ,Day
-    ,`Log Return`
-  ) %>% 
-  bind_cols(
-    banana_logreturn_decomp$time.series %>% 
-      data.frame() %>% 
-      as_tibble() %>% 
-      rename(
-        Remainder = remainder
-        ,Seasonal = seasonal
-        ,Trend = trend
-      )
-  ) %>% 
-  rename(Data = `Log Return`) %>% 
-  gather(
-    key = Decomposition
-    ,value = `Log Return`
-    ,-Date
-    ,-Year
-    ,-Month
-    ,-`Month Name`
-    ,-Day
-  ) %>% 
-  mutate(
-    Decomposition = factor(Decomposition, levels = c("Data", "Trend", "Seasonal", "Remainder"))
-  ) %>% 
-  ggplot(
-    aes(
-      x = Date
-      ,y = `Log Return`
-    )
-  ) +
-  geom_line() +
-  facet_wrap(
-    ~ Decomposition
-    ,ncol = 1
-    ,scales = "free_y"
-  ) +
-  labs(title = "Figure 14: Banana Log Returns Decomposition")
+banana_price %>%
+select(
+Date
+,Year
+,Month
+,`Month Name`
+,Day
+,`Log Return`
+) %>%
+bind_cols(
+banana_logreturn_decomp$time.series %>%
+data.frame() %>%
+as_tibble() %>%
+rename(
+Remainder = remainder
+,Seasonal = seasonal
+,Trend = trend
+)
+) %>%
+rename(Data = `Log Return`) %>%
+gather(
+key = Decomposition
+,value = `Log Return`
+,-Date
+,-Year
+,-Month
+,-`Month Name`
+,-Day
+) %>%
+mutate(
+Decomposition = factor(Decomposition, levels = c("Data", "Trend", "Seasonal", "Remainder"))
+) %>%
+ggplot(
+aes(
+x = Date
+,y = `Log Return`
+)
+) +
+geom_line() +
+facet_wrap(
+~ Decomposition
+,ncol = 1
+,scales = "free_y"
+) +
+labs(title = "Figure 14: Banana Log Returns Decomposition")
 ```
 
-In Figure YY: The Banana log Returns and the Remainder show a similar trend. This provides evidence towards not inclusing a seasonal or trend component in the model. 
+In Figure 14: The Banana Log Returns and the Remainder show a similar pattern. This is evidence that there is no significant seasonal nor trend component in the model.
 
 ## ADF Test (Dickey's Test)
 
-Dickey's test is used to evaluate whether the time-series of Banana Price, Banana Return and the Banana Log Return are stationary or integrated. 
+The Augmented Dickey-Fuller test is used to evaluate whether the time-series of Banana Price, Banana Return and the Banana Log Return are stationary or integrated. The Price model is not stationary at lag 12, but is stationary at lag 6. The Return and Log Return models are both stationary at lags 6 and 12.
 
 ```{r ADF}
 suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$Price, alternative = "stationary")} %>% 
-  pander()
+  banana_price %>%
+  {adf.test(.$Price, alternative = "stationary")} %>%
+    pander()
 )
 suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$Price, alternative = "stationary", k = 12)} %>% 
-  pander()
-)
-
-suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$R_a, alternative = "stationary")} %>% 
-  pander()
-)
-suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$R_a, alternative = "stationary", k = 12)} %>% 
-  pander()
+  banana_price %>%
+  {adf.test(.$Price, alternative = "stationary", k = 12)} %>%
+    pander()
 )
 
 suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$`Log Return`, alternative = "stationary")} %>% 
-  pander()
+  banana_price %>%
+  {adf.test(.$R_a, alternative = "stationary")} %>%
+    pander()
 )
 suppressWarnings(
-  banana_price %>% 
-  {adf.test(.$`Log Return`, alternative = "stationary", k = 12)} %>% 
-  pander()
+  banana_price %>%
+  {adf.test(.$R_a, alternative = "stationary", k = 12)} %>%
+    pander()
+)
+
+suppressWarnings(
+  banana_price %>%
+  {adf.test(.$`Log Return`, alternative = "stationary")} %>%
+    pander()
+)
+suppressWarnings(
+  banana_price %>%
+  {adf.test(.$`Log Return`, alternative = "stationary", k = 12)} %>%
+    pander()
 )
 ```
 
-
-
-## SARIMA
-### AIC and BIC Selection
-
-## Model Diagnostics
-
 ## Model Selection 
+### Auto ARIMA
 
-## Forecasting of Banana Price for Next 3 Years
+The auto-ARIMA function recommends an ARIMA(1,0,1) model with non-zero mean for the Banana Return model. For the Banana Log Return model, an ARMIA(1,0,1) model with zero mean is recommended instead.
+
+```{r Auto-ARIMA}
+# banana_price_autoarima_01 <- auto.arima(banana_price$Price, seasonal = TRUE)
+# summary(banana_price_autoarima_01)
+# 
+# banana_ra_autoarima_01 <- auto.arima(banana_price$R_a, seasonal = TRUE)
+# summary(banana_ra_autoarima_01)
+
+banana_log_ret_autoarima_01 <- auto.arima(banana_price$`Log Return`, seasonal = TRUE)
+summary(banana_log_ret_autoarima_01)
+```
+
+### Minimum AIC and BIC
+```{r min AIC BIC, cache=TRUE}
+pdqPDQ <-
+  0:1 %>% 
+  rep(times = 3, each = 2) %>% 
+  combn(m = 6) %>% 
+  t()
+
+banana_arima_builder <- function(pdq){
+  banana_arima <-
+    Arima(
+      y = banana_price$`Log Return`
+      ,order = pdq[1:3]
+      ,seasonal = pdq[4:6]
+    )
+    banana_aic <- banana_arima$aic
+    banana_bic <- AIC(banana_arima, k = as.numeric(count(banana_price)))
+    list(
+      p = pdq[1]
+      ,d = pdq[2]
+      ,q = pdq[3]
+      ,P = pdq[4]
+      ,D = pdq[5]
+      ,Q = pdq[6]
+      # ,arima = banana_arima
+      ,AIC = banana_aic
+      ,BIC = banana_bic
+    )
+}
+
+banana_arima_stats <- 
+  1:dim(pdqPDQ)[1] %>% 
+  map(~ pdqPDQ[., ]) %>% 
+  map_df(banana_arima_builder)
+
+banana_min_aic <- 
+  banana_arima_stats %>% 
+  filter(AIC == min(AIC)) %>% 
+  unique()
+banana_min_aic %>% 
+  kable(caption = "Minimum AIC")
+
+banana_min_bic <- 
+  banana_arima_stats %>% 
+  filter(BIC == min(BIC)) %>% 
+  unique()
+banana_min_bic %>% 
+  kable(caption = "Minimum BIC")
+
+banana_aic_arima <- 
+  banana_min_aic %>% 
+  select(-AIC, -BIC) %>%
+  mutate(`Model #` = 1:nrow(banana_min_aic)) %>%
+  gather(
+    key = Letter
+    ,value = Num
+    ,-`Model #`
+  ) %>% 
+  split(.$`Model #`) %>% 
+  map(~ .$Num) %>% 
+  map(
+    ~ Arima(
+      y = banana_price$`Log Return`
+      ,order = .[1:3]
+      ,seasonal = .[4:6]
+    )
+  )
+# banana_aic_arima %>% 
+#   map(summary)
+
+# Just 1 entry
+banana_aic_arima$`1` %>% 
+  summary() %>% 
+  pander()
+
+banana_bic_arima <- 
+  banana_min_bic %>% 
+  select(-AIC, -BIC) %>%
+  mutate(`Model #` = 1:nrow(banana_min_bic)) %>%
+  gather(
+    key = Letter
+    ,value = Num
+    ,-`Model #`
+  ) %>% 
+  split(.$`Model #`) %>% 
+  map(~ .$Num) %>% 
+  map(
+    ~ Arima(
+      y = banana_price$`Log Return`
+      ,order = .[1:3]
+      ,seasonal = .[4:6]
+    )
+  )
+# banana_bic_arima %>% 
+#   map(summary)
+
+# Just 1 entry
+banana_bic_arima$`1` %>% 
+  summary() %>% 
+  pander()
+```
+
+
+# Forecasting Banana Price
+## Auto-ARIMA
+```{r AA Forecast Log Return}
+banana_autoarima_forecast <- 
+  banana_log_ret_autoarima_01 %>% 
+  forecast(num_periods_ahead) 
+
+banana_autoarima_forecast <-
+  tibble(
+    Date = max(banana_price$Date) + months(1:num_periods_ahead)
+    ,Mean = as.numeric(banana_autoarima_forecast$mean)
+  ) %>% 
+  bind_cols(as_tibble(banana_autoarima_forecast$lower)) %>% 
+  rename(`Lower 80%` = `80%`, `Lower 95%` = `95%`) %>% 
+  bind_cols(as_tibble(banana_autoarima_forecast$upper)) %>% 
+  rename(`Upper 80%` = `80%`, `Upper 95%` = `95%`) %>% 
+  mutate(Type = "Forecast") %>% 
+  bind_rows()
+banana_autoarima_forecast %>% 
+    select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Auto-ARIMA Forecasted Log Return")
+```
+
+```{r AA Log Return TS}
+banana_forecast_logreturn <- 
+  banana_price %>% 
+  select(
+    Date
+    ,Mean = `Log Return`
+  ) %>% 
+  mutate(
+    `Lower 80%` = Mean
+    ,`Lower 95%` = Mean
+    ,`Upper 80%` = Mean
+    ,`Upper 95%` = Mean
+    ,Type = "Actual"
+  ) 
+
+banana_autoarima_logreturn_plot <- 
+  banana_forecast_logreturn %>% 
+  bind_rows(banana_autoarima_forecast) %>% 
+  bind_rows(
+    banana_forecast_logreturn %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  ) %>% 
+  mutate(Model = "Based on the Auto-ARIMA Model for Log Returns") %>% 
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_autoarima_logreturn_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Log Return"
+    ,y = "Log Return"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r AA Forecast Price}
+banana_forecast_price <- 
+  banana_price %>% 
+  select(
+    Date
+    ,Mean = Price
+  ) %>% 
+  mutate(
+    `Lower 80%` = Mean
+    ,`Lower 95%` = Mean
+    ,`Upper 80%` = Mean
+    ,`Upper 95%` = Mean
+    ,Type = "Actual"
+  )
+
+banana_forecast_price <-
+  banana_forecast_price %>% 
+  bind_rows(banana_forecast_price) %>% 
+  bind_rows(
+    banana_forecast_price %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  )
+
+
+for (t in 1:nrow(banana_autoarima_forecast)){
+  banana_forecast_price <- 
+    log_ret_to_price(
+      historical_data = banana_forecast_price
+      ,forecast_data = banana_autoarima_forecast
+    )
+}
+
+banana_forecast_price %>% 
+  filter(Date > "2017-01-01") %>% 
+  select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Auto-ARIMA Forecasted Price")
+```
+
+```{r AA Price TS}
+banana_autoarima_price_plot <- 
+  banana_forecast_price %>% 
+  mutate(Model = "Based on the Auto-ARIMA Model for Log Returns") %>% 
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_autoarima_price_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Price"
+    ,y = "Price (USD/Metric Ton)"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r AA RMSE}
+banana_log_ret_autoarima_01 %>% 
+  accuracy() %>% 
+  as_tibble() %>% 
+  kable(caption = "Auto-ARIMA Accuracy")
+```
+
+
+## Minimum AIC
+```{r AIC Forecast Log Return}
+banana_aic_forecast <- 
+  banana_aic_arima$`1` %>% 
+  forecast(num_periods_ahead) 
+
+banana_aic_forecast <-
+  tibble(
+    Date = max(banana_price$Date) + months(1:num_periods_ahead)
+    ,Mean = as.numeric(banana_aic_forecast$mean)
+  ) %>% 
+  bind_cols(as_tibble(banana_aic_forecast$lower)) %>% 
+  rename(`Lower 80%` = `80%`, `Lower 95%` = `95%`) %>% 
+  bind_cols(as_tibble(banana_aic_forecast$upper)) %>% 
+  rename(`Upper 80%` = `80%`, `Upper 95%` = `95%`) %>% 
+  mutate(Type = "Forecast") %>% 
+  bind_rows()
+banana_aic_forecast %>% 
+    select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Minimum AIC Forecasted Log Return")
+```
+
+```{r AIC Log Return TS}
+banana_aic_logreturn_plot <- 
+  banana_forecast_logreturn %>% 
+  bind_rows(banana_aic_forecast) %>% 
+  bind_rows(
+    banana_forecast_logreturn %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  ) %>% 
+  mutate(Model = "Based on the Minimum AIC Model for Log Returns") %>% 
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_aic_logreturn_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Log Return"
+    ,y = "Log Return"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r AIC Forecast Price}
+banana_forecast_price <- 
+  banana_price %>% 
+  select(
+    Date
+    ,Mean = Price
+  ) %>% 
+  mutate(
+    `Lower 80%` = Mean
+    ,`Lower 95%` = Mean
+    ,`Upper 80%` = Mean
+    ,`Upper 95%` = Mean
+    ,Type = "Actual"
+  )
+
+banana_forecast_price <-
+  banana_forecast_price %>% 
+  bind_rows(banana_forecast_price) %>% 
+  bind_rows(
+    banana_forecast_price %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  )
+
+
+for (t in 1:nrow(banana_aic_forecast)){
+  banana_forecast_price <- 
+    log_ret_to_price(
+      historical_data = banana_forecast_price
+      ,forecast_data = banana_aic_forecast
+    )
+}
+
+banana_forecast_price %>% 
+  filter(Date > "2017-01-01") %>% 
+  select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Minimum AIC Forecasted Price")
+```
+
+```{r AIC Price TS}
+banana_aic_price_plot <- 
+  banana_forecast_price %>% 
+  mutate(Model = "Based on the Minimum AIC Model for Log Returns") %>% 
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_aic_price_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Price"
+    ,y = "Price (USD/Metric Ton)"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r AIC RMSE}
+banana_aic_arima$`1` %>% 
+  accuracy() %>% 
+  as_tibble() %>% 
+  kable(caption = "Minimum AIC Accuracy")
+```
+
+
+## Minimum BIC
+```{r BIC Forecast Log Return}
+banana_bic_forecast <- 
+  banana_bic_arima$`2` %>% 
+  forecast(num_periods_ahead) 
+
+banana_bic_forecast <-
+  tibble(
+    Date = max(banana_price$Date) + months(1:num_periods_ahead)
+    ,Mean = as.numeric(banana_bic_forecast$mean)
+  ) %>% 
+  bind_cols(as_tibble(banana_bic_forecast$lower)) %>% 
+  rename(`Lower 80%` = `80%`, `Lower 95%` = `95%`) %>% 
+  bind_cols(as_tibble(banana_bic_forecast$upper)) %>% 
+  rename(`Upper 80%` = `80%`, `Upper 95%` = `95%`) %>% 
+  mutate(Type = "Forecast") %>% 
+  bind_rows()
+banana_bic_forecast %>% 
+    select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Minimum BIC Forecasted Log Return")
+```
+
+```{r BIC Log Return TS}
+banana_bic_logreturn_plot <-
+  banana_forecast_logreturn %>% 
+  bind_rows(banana_bic_forecast) %>% 
+  bind_rows(
+    banana_forecast_logreturn %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  ) %>% 
+  mutate(Model = "Based on the Minimum BIC Model for Log Returns") %>% 
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_bic_logreturn_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Log Return"
+    ,y = "Log Return"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r BIC Forecast Price}
+banana_forecast_price <- 
+  banana_price %>% 
+  select(
+    Date
+    ,Mean = Price
+  ) %>% 
+  mutate(
+    `Lower 80%` = Mean
+    ,`Lower 95%` = Mean
+    ,`Upper 80%` = Mean
+    ,`Upper 95%` = Mean
+    ,Type = "Actual"
+  )
+
+banana_forecast_price <-
+  banana_forecast_price %>% 
+  bind_rows(banana_forecast_price) %>% 
+  bind_rows(
+    banana_forecast_price %>% 
+      filter(Date == max(Date)) %>% 
+      mutate(Type = "Forecast")
+  )
+
+
+for (t in 1:nrow(banana_bic_forecast)){
+  banana_forecast_price <- 
+    log_ret_to_price(
+      historical_data = banana_forecast_price
+      ,forecast_data = banana_bic_forecast
+    )
+}
+
+banana_forecast_price %>% 
+  filter(Date > "2017-01-01") %>% 
+  select(
+    -`Lower 80%`
+    ,-`Upper 80%`
+    ,-Type
+  ) %>% 
+  kable(caption = "Minimum BIC Forecasted Price")
+```
+
+```{r BIC Price TS}
+banana_bic_price_plot <-
+  banana_forecast_price %>% 
+  mutate(Model = "Based on the Minimum BIC Model for Log Returns") %>%  
+  ggplot(
+    aes(
+      x = Date
+      ,y = Mean
+      ,colour = Type
+    )
+  ) +
+  geom_ribbon(
+    aes(ymin = `Lower 95%`, ymax = `Upper 95%`)
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  geom_line() +
+  facet_wrap(~ Model) +
+  scale_colour_brewer(
+    type = "seq"
+    ,palette = "Set2"
+  ) +
+  theme(axis.title.y = element_blank())
+banana_bic_price_plot +
+  labs(
+    title = "Figure XX: Forecasted Banana Price"
+    ,y = "Price (USD/Metric Ton)"
+  ) +
+  theme(legend.position = "bottom")
+```
+
+```{r BIC RMSE}
+ banana_bic_arima$`1` %>% 
+  accuracy() %>% 
+  as_tibble() %>% 
+  kable(caption = "Minimum BIC Accuracy")
+```
+
+
+## Comparison
+```{r Comparison Log Return}
+grid.arrange(
+  banana_autoarima_logreturn_plot
+  ,banana_aic_logreturn_plot
+  ,banana_bic_logreturn_plot
+  ,ncol = 1
+  ,top = "Forecasted Banana Log Return"
+  ,left = "Log Return"
+)
+```
+
+```{r Comparison Price}
+grid.arrange(
+  banana_autoarima_price_plot
+  ,banana_aic_price_plot
+  ,banana_bic_price_plot
+  ,ncol = 1
+  ,top = "Forecasted Banana Price"
+  ,left = "Price (USD/Metric Ton)"
+)
+```
+
+```{r Comparison Accuracy}
+bind_cols(
+  Model = 
+    c(
+      "Auto-ARIMA"
+      ,"Minimum AIC"
+      ,"Minimum BIC"
+    )
+  ,bind_rows(
+    banana_log_ret_autoarima_01 %>% 
+      accuracy() %>% 
+      as_tibble()
+    ,banana_aic_arima$`1` %>% 
+      accuracy() %>% 
+      as_tibble()
+    ,banana_bic_arima$`1` %>% 
+      accuracy() %>% 
+      as_tibble()
+  )
+) %>% 
+  select(-MPE, -MAPE) %>% 
+  kable(caption = "Comparison of Model Accuracy")
+```
 
 # Results
 
 # Conclusions
 
 # Appendix
-## References
 
+# References
+[1] https://fred.stlouisfed.org/series/PBANSOPUSDM
+
+[2] http://www.britannica.com/plant/banana-plant
+
+[3] bananalink.org.uk

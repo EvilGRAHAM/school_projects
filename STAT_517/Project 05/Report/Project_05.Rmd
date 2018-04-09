@@ -53,12 +53,18 @@ snow_long <-
     ,-Density
   ) %>% 
   mutate(Gauge = as.factor(Gauge))
+
+alpha <- 0.05
 ```
 
-```{r Stuff}
+# Introduction
+## Data
+```{r Wide Data}
 snow_wide %>% 
   kable(caption = "Wide Data")
+```
 
+```{r Measured Gain by Gauge}
 snow_long %>% 
   ggplot(
     aes(
@@ -77,36 +83,20 @@ snow_long %>%
     ,palette = "OrRd"
     ,direction = 1
   ) +
-  theme(
-    axis.text.x = element_blank()
-    ,axis.title.x = element_blank()
-    ,legend.position = "bottom"
-  )
-
-snow_long %>% 
-  ggplot(
-    aes(
-      x = Gauge
-      ,y = Density
-      ,colour = Gain
-    )
-  ) +
-  geom_point() +
-  facet_grid(
-    ~ Gauge
-    ,scales = "free_x"
-  ) +
-  scale_colour_distiller(
-    type = "seq"
-    ,palette = "OrRd"
-    ,direction = 1
+  labs(
+    title = "Figure 01: Measured Gain by Gauge"
+    ,colour = expression(paste("Density (g/cm"^3,")"))
   ) +
   theme(
     axis.text.x = element_blank()
     ,axis.title.x = element_blank()
     ,legend.position = "bottom"
   )
+```
 
+Talk about how the gauges are consistent
+
+```{r Training Data}
 snow_long_train <- 
   snow_long %>%
   filter(Gauge %in% c("G 01", "G 02", "G 03"))
@@ -123,33 +113,251 @@ snow_long_train %>%
     )
   ) +
   geom_smooth(method = "lm") +
-  geom_point()
+  geom_point() +
+  labs(
+    title = "Log Gain vs. Density with Training Data"
+    ,x = expression(paste("Density (g/cm"^3,")"))
+  )
+```
 
+talk about how a log model is appropriate
+
+
+## Training vs. Validation Data
+
+Talk about how we split the data into training data (Gauges 1-3), and validation data (gauges 4-10). 
+
+# Calibration
+## Classic Calibration Method
+```{r LM}
 snow_lm <-
   snow_long_train %>% 
   lm(
-      log(Gain) ~ Density# + Gauge
+      log(Gain) ~ Density
     ,data = .
   )
 
-summary(snow_lm)
+snow_lm %>% 
+  summary() %>% 
+  pander()
 autoplot(snow_lm)
+```
 
-snow_summ_valid <-
+```{r Classic Calibration Est}
+classic_calibration <- function(x, object){
+  (log(x) - object$coefficients[["(Intercept)"]]) / object$coefficients[["Density"]]
+}
+
+snow_summ_valid_cc <-
   snow_long_valid %>% 
   group_by(Density) %>% 
   summarize(`Mean Gain` = mean(Gain)) %>% 
   mutate(
-    `Est Density` = (log(`Mean Gain`) - snow_lm$coefficients[["(Intercept)"]]) / snow_lm$coefficients[["Density"]]
+    `Est Density` = classic_calibration(x = `Mean Gain`, object = snow_lm)
+    ,`Prediction Std. Error` = 
+      qt(1-alpha/2, snow_lm$df.residual, lower.tail = TRUE) * 
+      sqrt(
+        (summary(snow_lm)$sigma/snow_lm$coefficients[[2]])^2 *
+        ( 1 + 
+            1/nrow(snow_long_train) + 
+            (`Est Density` - mean(snow_long_train$Density))^2/sd(snow_long_train$Density) )
+      )
+    ,`Prediction LB` = `Est Density` - `Prediction Std. Error`
+    ,`Prediction UB` = `Est Density` + `Prediction Std. Error`
   )
-snow_summ_valid
+snow_summ_valid_cc %>% 
+  kable()
+```
 
-snow_long_train %>% 
-  ggplot(aes(x = Density, y = log(Gain))) +
-  geom_hline(
-    data = snow_summ_valid
-    ,aes(yintercept = log(`Mean Gain`))
+```{r CC Dens vs Gain}
+snow_summ_valid_cc %>% 
+  ggplot(
+    aes(
+      x = `Mean Gain`
+      ,y = `Est Density`
+    )
   ) +
-  geom_smooth(method = "lm", se = FALSE) +
-  geom_point()
+  geom_ribbon(
+    aes(
+      ymin = `Prediction LB`
+      ,ymax = `Prediction UB`
+    )
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  stat_function(
+    fun = classic_calibration
+    ,args = list(object = snow_lm)
+  ) +
+  geom_point() +
+  labs(
+    title = "Estimated Density vs. Gain"
+    ,subtitle = "With Prediction Interval and Curve"
+    ,y = expression(paste("Estimated Density (g/cm"^3,")"))
+  )
+```
+
+```{r CC Unbias}
+snow_summ_unbias_cc <- 
+  snow_summ_valid_cc %>% 
+  mutate(
+    Bias = 
+      (Density - mean(snow_long_train$Density)) * summary(snow_lm)$sigma^2 /
+      (snow_lm$coefficients[[2]]^2 * sd(snow_long_train$Density))
+    ,`Unbiased Est Density` = `Est Density` - Bias
+    ,Diff = Density - `Unbiased Est Density`
+  ) %>% 
+  select(Density, `Est Density`, Bias, `Unbiased Est Density`, Diff)
+snow_summ_unbias_cc %>% 
+  kable(caption = "Unbiasing the Estimated Density")
+```
+
+$$
+  D_{pred} = 
+  -\frac{\ln(G) - 6.0032}{4.6301} =
+  1.2965 - 0.2160\ln(G)
+$$
+
+
+## Inverse Regression
+```{r Inv LM}
+snow_inv_lm <-
+  snow_long_train %>% 
+  mutate(`Centred Gain` = exp(log(Gain) - mean(log(Gain)))) %>% 
+  lm(
+    Density ~ log(`Centred Gain`)
+    ,data = .
+  )
+snow_inv_lm %>% 
+  summary() %>% 
+  pander()
+autoplot(snow_inv_lm)
+```
+
+$$
+  D =
+  \gamma_{0} + \gamma_{1}\left( \ln(G) - \overline{\ln(G)} \right)
+  0.3311 - 02155\left( \ln(G) - 4.4701 \right)
+$$
+$$
+  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
+  \gamma_{0} = \bar{D}
+$$
+
+
+```{r Inverse Reg Est}
+inverse_regression <- function(x, object){
+  predict(object = object, newdata = tibble(`Centred Gain` = exp(log(x) - mean(log(snow_long_train$Gain)))))
+}
+
+snow_summ_valid_ir <-
+  snow_long_valid %>% 
+  group_by(Density) %>% 
+  summarize(
+    `Mean Gain` = mean(Gain)
+  ) %>% 
+  mutate(
+    `Mean Centred Gain` = exp(log(`Mean Gain`) - mean(log(snow_long_train$Gain)))
+  ) %>% 
+  mutate(
+    `Est Density` = inverse_regression(x = `Mean Gain`, object = snow_inv_lm)
+    ,`Prediction Std. Error` =
+      qt(1-alpha/2, snow_inv_lm$df.residual, lower.tail = TRUE) *
+      sqrt(
+        (summary(snow_inv_lm)$sigma)^2 *
+          ( 1 +
+              1/nrow(snow_long_train) +
+              (log(`Mean Gain`) - mean(log(snow_long_train$Gain)))^2/sd(log(snow_long_train$Gain)) )
+      )
+    ,`Prediction LB` = `Est Density` - `Prediction Std. Error`
+    ,`Prediction UB` = `Est Density` + `Prediction Std. Error`
+  )
+snow_summ_valid_ir %>% 
+  kable()
+```
+
+```{r IR Dens vs Gain}
+snow_summ_valid_ir %>% 
+  ggplot(
+    aes(
+      x = `Mean Gain`
+      ,y = `Est Density`
+    )
+  ) +
+  geom_ribbon(
+    aes(
+      ymin = `Prediction LB`
+      ,ymax = `Prediction UB`
+    )
+    ,fill = "grey60"
+    ,alpha = 0.4
+  ) +
+  stat_function(
+    fun = inverse_regression
+    ,args = list(object = snow_inv_lm)
+  ) +
+  geom_point() +
+  labs(
+    title = "Estimated Density vs. Gain"
+    ,subtitle = "With Prediction Interval and Curve"
+    ,y = expression(paste("Estimated Density (g/cm"^3,")"))
+  )
+```
+
+```{r IR Unbias}
+snow_summ_unbias_ir <- 
+  snow_summ_valid_ir %>% 
+  mutate(
+    Bias = 
+      (Density - mean(snow_long_train$Density)) * snow_inv_lm$coefficients[[2]] /
+      (1 + 
+         (snow_inv_lm$coefficients[[2]]^2*sd(snow_long_train$Density))/
+         ((nrow(snow_long_train) - 1)*summary(snow_inv_lm)$sigma^2)
+      )
+    ,`Unbiased Est Density` = `Est Density` - Bias
+    ,Diff = Density - `Unbiased Est Density`
+  ) %>% 
+  select(Density, `Est Density`, Bias, `Unbiased Est Density`, Diff)
+snow_summ_unbias_ir %>% 
+  kable(caption = "Unbiasing the Estimated Density")
+```
+
+
+## Comparison
+```{r Comparison}
+snow_summ_unbias_cc %>% 
+  select(
+    Density
+    ,`CC Est Density` = `Est Density`
+    ,`CC Bias` = Bias
+  ) %>% 
+  left_join(
+    snow_summ_unbias_ir %>% 
+      select(
+        Density
+        ,`IR Est Density` = `Est Density`
+        ,`IR Bias` = Bias
+      )
+    ,by = "Density"
+  ) %>% 
+  kable()
+
+snow_summ_valid_cc %>% 
+  select(
+    Density
+    ,`Mean Gain`
+    ,`CC Est Density` = `Est Density`
+    ,`CC Prediction Std. Error` = `Prediction Std. Error`
+  ) %>% 
+  left_join(
+    snow_summ_valid_ir %>% 
+      select(  
+        Density
+        ,`Mean Gain`
+        ,`IR Est Density` = `Est Density`
+        ,`IR Prediction Std. Error` = `Prediction Std. Error`
+      )
+    ,by = c("Density" = "Density", "Mean Gain" = "Mean Gain")
+  ) %>% 
+  kable()
 ```
