@@ -466,9 +466,10 @@ summary(banana_log_ret_autoarima_01)
 # Model Selection ----------
 pdqPDQ <-
   0:1 %>% 
-  rep(times = 3, each = 2) %>% 
+  rep(times = 4, each = 3) %>% 
   combn(m = 6) %>% 
-  t()
+  t() %>% 
+  unique()
 
 banana_arima_builder <- function(pdq){
   banana_arima <-

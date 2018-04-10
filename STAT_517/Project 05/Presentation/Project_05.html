@@ -259,7 +259,12 @@
 
 </article></slide><slide class=""><hgroup><h2>Classic Calibration Method</h2></hgroup><article  id="classic-calibration-method" class="smaller ">
 
-<p>For the classic calibration method, we regress our measurement (\(G:=\) Gain) as a function of the known variable (\(D:=\) Density).</p>
+<p>Let: \[
+  G := \text{Gain},
+  D := \text{Density}
+\] \[
+  \ln(G) = f(D)
+\]</p>
 
 <table class = 'rmdtable'>
 <col width="25%" />
@@ -491,8 +496,11 @@
 
 <p>\[
   \hat{D_{i}} =
-  \hat{\gamma_{0}} + \hat{\gamma_{1}}\left( \ln(G_{i}) - \overline{\ln(G_{i})} \right) + \epsilon_{i},
+  \hat{\gamma_{0}} + \hat{\gamma_{1}}\left( \ln(G_{i}) - \overline{\ln(G)} \right) + \epsilon_{i},
   \epsilon_{i} \stackrel{iid}{\sim} \mathcal{N}(0,\sigma^{2})
+\] \[
+  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
+  \hat{\gamma_{0}} = \bar{D}
 \]</p>
 
 <table class = 'rmdtable'>
@@ -544,14 +552,9 @@
 </tr>
 </table>
 
-</article></slide><slide class=""><hgroup><h2>Inverse Regression Equation</h2></hgroup><article  id="inverse-regression-equation" class="smaller ">
-
 <p>\[
   \hat{D_{i}} =
   0.3311 - 0.2155\left( \ln(G_{i}) - 4.4701 \right) + \epsilon_{i}
-\] \[
-  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
-  \hat{\gamma_{0}} = \bar{D}
 \]</p>
 
 </article></slide><slide class=""><hgroup><h2>Inverse Regression Prediction Interval</h2></hgroup><article  id="inverse-regression-prediction-interval" class="smaller ">
@@ -926,7 +929,7 @@
   \hat{\beta_{0}} + \hat{\beta_{1}}D_{i} + \epsilon^{\star}_{G,i}
 \] Where \[
   \epsilon^{\star}_{G,i} \sim
-  \mathcal{N}\left( 0, \hat{\beta_{1}}^{2}\sigma_{D}^{2}+\sigma_{G}^{2}+2\hat{\beta_{1}}\Cov(D,G) \right)
+  \mathcal{N}\left( 0, \hat{\beta_{1}}^{2}\sigma_{D}^{2}+\sigma_{G}^{2}+2\hat{\beta_{1}}\Cov(\epsilon_{D,i},\epsilon_{G,i}) \right)
 \]</p></article></slide>
 
 

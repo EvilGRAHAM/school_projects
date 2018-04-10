@@ -126,7 +126,14 @@ snow_long_train %>%
 
 # Classic Calibration
 ## Classic Calibration Method
-For the classic calibration method, we regress our measurement ($G:=$ Gain) as a function of the known variable ($D:=$ Density).
+Let:
+$$
+  G := \text{Gain},
+  D := \text{Density}
+$$
+$$
+  \ln(G) = f(D)
+$$
 ```{r LM}
 snow_lm <-
   snow_long_train %>% 
@@ -252,9 +259,14 @@ snow_summ_unbias_cc %>%
 ## Inverse Regression Method
 $$
   \hat{D_{i}} =
-  \hat{\gamma_{0}} + \hat{\gamma_{1}}\left( \ln(G_{i}) - \overline{\ln(G_{i})} \right) + \epsilon_{i},
+  \hat{\gamma_{0}} + \hat{\gamma_{1}}\left( \ln(G_{i}) - \overline{\ln(G)} \right) + \epsilon_{i},
   \epsilon_{i} \stackrel{iid}{\sim} \mathcal{N}(0,\sigma^{2})
 $$
+$$
+  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
+  \hat{\gamma_{0}} = \bar{D}
+$$
+
 ```{r Inv LM}
 snow_inv_lm <-
   snow_long_train %>% 
@@ -268,15 +280,9 @@ snow_inv_lm %>%
   pander()
 ```
 
-
-## Inverse Regression Equation
 $$
   \hat{D_{i}} =
   0.3311 - 0.2155\left( \ln(G_{i}) - 4.4701 \right) + \epsilon_{i}
-$$
-$$
-  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
-  \hat{\gamma_{0}} = \bar{D}
 $$
 
 
@@ -466,5 +472,5 @@ $$
 Where
 $$
   \epsilon^{\star}_{G,i} \sim
-  \mathcal{N}\left( 0, \hat{\beta_{1}}^{2}\sigma_{D}^{2}+\sigma_{G}^{2}+2\hat{\beta_{1}}\Cov(D,G) \right)
+  \mathcal{N}\left( 0, \hat{\beta_{1}}^{2}\sigma_{D}^{2}+\sigma_{G}^{2}+2\hat{\beta_{1}}\Cov(\epsilon_{D,i},\epsilon_{G,i}) \right)
 $$
