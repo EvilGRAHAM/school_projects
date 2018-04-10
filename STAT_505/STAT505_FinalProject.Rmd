@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 library(knitr, warn.conflicts = FALSE, quietly = FALSE)
 library(pander, warn.conflicts = FALSE, quietly = FALSE)
+library(aTSA, warn.conflicts = FALSE, quietly = TRUE)
 library(forecast, warn.conflicts = FALSE, quietly = TRUE)
 library(tseries, warn.conflicts = FALSE, quietly = TRUE)
 library(tidyverse, warn.conflicts = FALSE, quietly = TRUE)
@@ -160,26 +161,28 @@ num_periods_ahead <- 12*3
 
 # Abstract
 
+This is a time-series analysis used for forecasting the price of the commodity, bananas. To conduct this analysis the original data set was examined to identify trend and seasonal components. Since this data set had both components, transformations were made, followed by using the minimum AIC and BIC for model selection. Once the model was selected, and diagnostics were completed, it was used to forecast the price of bananas to the year 2020. The expected price will increase to $1150 USD/Metric Ton by 2020. 
+
 # Introduction
 
-The intent of this paper is to forecast the future price of Bananas. This paper uses time-series modeling techniques.The data was collected from webpage fred.stlouisfed.org and ranges from January 1998 to December 2017 [1].
+The intent of this paper is to forecast the price of Bananas. This paper uses time-series modeling techniques.The data was collected from the Federal Reserve Bank of St. Louis webpage, and ranges from January 1998 to December 2017 (FRED, 2017).
 
-Bananas are a type of fruit that is consumed worldwide for its nutritional value and the availablility of Bananas throughout the year [2]. The main type banana that is exported is the Cavendish Banana [2]. Though bananas can be frozen and used for baking, they are most commonlye consumed fresh and therefore it is important for suppliers to always have a new supply of bananas for their customers [2].
+Bananas are a type of fruit that is consumed worldwide for its nutritional value and the availability of Bananas throughout the year (Britannica T.E, 2018). The main type banana that is exported is the Cavendish Banana (Britannica T.E, 2018). Though bananas can be frozen and used for baking, they are most commonly consumed fresh and therefore it is important for suppliers to always have a new supply of bananas for their customers (Britannica T.E, 2018).
 
-There are a few important considerations when evaluating the price of bananas, the first is evaluating if there exists a seasonal component and a trend component. These components might occur because Banana plants only fruit once in their lifetime, and the banana crop is mostly exported [2]. When banana plants fruit they only produce about 50 to 150 bananas each, once a banana plant has fruited, it's trunk is cut down to the ground and will be replaced by a rhizome where it will take between 9 to 12 months for the plant to fruit again [2],[3]. Therefore, this paper will be evaluating the seasonal components and the trend components of the price of bananas overtime.
+There are a few important considerations when evaluating the price of bananas, the first is evaluating if there exists a seasonal component and a trend component. These components might occur because Banana plants only fruit once in their lifetime, and the banana crop is mostly exported (Britannica T.E, 2018). When banana plants fruit they only produce about 50 to 150 bananas each, once a banana plant has fruited, it's trunk is cut down to the ground and will be replaced by a rhizome where it will take between 9 to 12 months for the plant to fruit again (Britannica T.E, 2018),(Banana Link, n.d). Therefore, this paper will be evaluating the seasonal components and the trend components of the price of bananas overtime.
 
 # Methodology
 ## Original Time Series Plot
 To begin analysis of the stock price of Bananas a plot of the price and the date was created, and is shown in Figure 1.
 
 
-In Figure 1, there appears to be a seasonal effect on the price of bananas. This is noticed because of the rythmic spikes and drops in the price that appears to follow a similar trend throughout multiple years.
+In Figure 1, there appears to be a seasonal effect on the price of bananas. This is noticed because of the rhythmic spikes and drops in the price that appears to follow a similar trend throughout multiple years.
 
 A linear regression line was fitted to the data which has positive slope indicating that there is likely an increasing trend in the price of bananas since 1997.
 
 A local regression (loess) curve was fitted to the data. This adds a smooth curve to all of the data. The loess curve is used to gauge the fit of the linear regression model, where a good model would have a loess model similar to the linear regression model. Since the loess model and the linear regression model deviate significantly, it requires further analysis and adjustments to the data.
 
-```{r Original TS}
+```{r Original TS, fig.height=3, fig.width=7}
 banana_price %>%
 ggplot(
 aes(
@@ -199,7 +202,7 @@ title = "Figure 01: Banana Price"
 
 ## Orginial Seasonal Plot
 
-```{r Seasonal Price by Year}
+```{r Seasonal Price by Year, fig.height=3,fig.width=7}
 banana_price %>%
 group_by(Season, Year) %>%
 summarize(`Mean Price` = mean(Price)) %>%
@@ -259,7 +262,7 @@ In Figure 03, violin plots of the price of bananas were separated by the season.
 
 Figure 03 also shows the price of bananas and the year as coloured points. These points show an overall trend that the cost of bananas has been increasing since 1998, as we can see the change in the colour from blue (indicating the earlier years) at the bottom and red (indicating the later years) at the top. Figure 04 shows this more clearly.
 
-```{r Monthly Price by Year}
+```{r Monthly Price by Year, fig.height=3,fig.width=7}
 banana_price %>%
 ggplot(
 aes(
@@ -284,7 +287,7 @@ According to Figure 04, there has been an increase in the price of Bananas over 
 
 
 ## Lagged Scatter Plot
-```{r Lagged Scatter Plot}
+```{r Lagged Scatter Plot, fig.height=5, fig.width=5}
 banana_lagged <-
 banana_price %>%
 mutate(
@@ -333,9 +336,9 @@ title = "Figure 05: Lag Scatter Plot"
 )
 ```
 
-Figure 05 show the lag plots at each month in our dataset. The lag plots are showing the potential correlation between one lag and the previous lag. In these plots we are comparing the first month to all the oterh months. There appears to be significant correlation in lags 1 through 4, and in lags 4 through 12 the distribution appears to be more random.
+Figure 05 show the lag plots at each month in our data set. The lag plots are showing the potential correlation between one lag and the previous lag. In these plots we are comparing the first month to all the other months. There appears to be significant correlation in lags 1 through 4, and in lags 4 through 12 the distribution appears to be more random.
 
-```{r Lagged Correlation}
+```{r Lagged Correlation, fig.height=3,fig.with=3}
 banana_lagged %>%
 select(`Lag 00` = Price, starts_with("Lag")) %>%
 ggcor(lb = 0.7, use = "complete.obs") +
@@ -346,37 +349,37 @@ Figure 06 is a correlation plot between the lags. In general the correlations ra
 
 ## Autocorrelation Function and Partial Autocorrelation Function
 
-```{r Price ACF}
+```{r Price ACF, fig.height=4,fig.width=7}
 ggacf(banana_price, col = Price, type = "correlation") + labs(title = "Figure 07: Price ACF")
 ```
 
 Figure 07 is a plot of the Autocorrelation function, which is checking the correlation between a lag and the previous lag. In this case, there is a gradual decrease in the spikes along the plot, which might indicate that there is some autoregressive component required in the model.
 
-```{r Price PACF}
+```{r Price PACF, fig.height=4, fig.width=7}
 ggacf(banana_price, col = Price, type = "partial") + labs(title = "Figure 08: Price PACF")
 ```
 
 In the Partial Autocorrelation plot in Figure 08, there is a significant spike at lag 1, followed by correlations that are mostly not significant, therefore it is suspected that this has an autoregressive component. Furthermore, there are noticeable spikes approximately every 4 lags, indicating a seasonality component.
 
 ## Transformations
-Since there are both seasonal and trend components in the Banana Price dataset, transformations are required. Multiple different transformations were tested on the Banana Price dataset and can be seen in Figure 09. Note that once again the orange line represents the results from fitting a linear regression model while the green line represents the results from fitting a loess regression model.
+Since there are both seasonal and trend components in the Banana Price data set, transformations are required. Multiple different transformations were tested on the Banana Price data set and can be seen in Figure 09. Note that once again the orange line represents the results from fitting a linear regression model while the green line represents the results from fitting a loess regression model.
 
-The first transformation was to take the log of the Banana Price. This transformation did not have a significant impact on removing the trend or the seasonality from the dataset.
+The first transformation was to take the log of the Banana Price. This transformation did not have a significant impact on removing the trend or the seasonality from the data set.
 
-The second transformation was using the Box-Cox method in R. Again, there was not a significant reduction in the trend or the seasonality of the dataset.
+The second transformation was using the Box-Cox method in R. Again, there was not a significant reduction in the trend or the seasonality of the data set.
 
-The third transformation performed was to change the dataset from the stock price of bananas to the return of the bananas. The new dataset, Banana Return, resulted in a significant reduction to the trend of the Banana Price.
+The third transformation performed was to change the data set from the stock price of bananas to the return of the bananas. The new data set, Banana Return, resulted in a significant reduction to the trend of the Banana Price.
 
 Following the initial transformation of the Banana Price to Banana Return, additional transformations were conducted to further reduce the trend.
 
-A transformation was applied by taking the log of the Banana Return. This transformation also had a significant effect on the removal of trend in the Banana Return dataset.
+A transformation was applied by taking the log of the Banana Return. This transformation also had a significant effect on the removal of trend in the Banana Return data set.
 
-A Box-Cox transformation was also performed on the Banana Return dataset, this transformation did not result in any significant removal of the trend in the Banana Return dataset.
+A Box-Cox transformation was also performed on the Banana Return data set, this transformation did not result in any significant removal of the trend in the Banana Return data set.
 
 Therefore, due to the ease of interpretation and removal of trend, the Banana Return and the log of Banana Return will be used for further modeling of the Price of Bananas.
 
 ## Transformation Time-Series Plot
-```{r Trans TS Plot, fig.height=7}
+```{r Trans TS Plot, fig.height=6,fig.width=7}
 banana_price <-
 banana_price %>%
 mutate(
@@ -495,7 +498,7 @@ title = "Figure 11: Return on Bananas by Month"
 )
 ```
 
-From Figure 11, the elimination of the trend in the dataset is apparent since the gradual increasing trend from the earlier years, in blue, and the later years, in red, is no longer present. Additionally, the plot also shows that there is higher variation on return rate during the earlier years compared to the later years.
+From Figure 11, the elimination of the trend in the data set is apparent since the gradual increasing trend from the earlier years, in blue, and the later years, in red, is no longer present. Additionally, the plot also shows that there is higher variation on return rate during the earlier years compared to the later years.
 
 ## Transformation Autocovariance Function
 
@@ -511,7 +514,7 @@ The plots in Figure 12 all show a significant correlation at the first lag, foll
 
 ## Decomposition of Transformation
 
-To confirm if there exists a trend or seasonal componenent in the Banana Price, the Banana Return and the Log of the Banana Return datasets, the decomposition method was used.
+To confirm if there exists a trend or seasonal component in the Banana Price, the Banana Return and the Log of the Banana Return data sets, the decomposition method was used.
 
 ```{r Decomposition Stats}
 banana_price_decomp <-
@@ -552,7 +555,7 @@ caption = "Log Return Decomposition Summary Statistics"
 
 
 
-```{r Price Decomposition Plot}
+```{r Price Decomposition Plot, fig.height=5, fig.width=7}
 banana_price %>%
 select(
 Date
@@ -605,7 +608,7 @@ title = "Figure 13: Banana Prices Decomposition"
 
 From figure 13, we see that the mean seasonal effect is 0.0002305\%, the mean trend effect is 0.001110\%, and the mean remainder effect is 0.0002209.
 
-```{r Log Return Decomposition Plot}
+```{r Log Return Decomposition Plot, fig.height=5, fig.width=7}
 banana_price %>%
 select(
 Date
@@ -709,6 +712,13 @@ The auto-ARIMA function recommends an ARIMA(1,0,1) model with non-zero mean for 
 banana_log_ret_autoarima_01 <- auto.arima(banana_price$`Log Return`, seasonal = TRUE)
 summary(banana_log_ret_autoarima_01)
 ```
+$$\phi(B)\Phi(B^s)Y_t= \theta(B)\Theta(B^s)Z_t $$ where $$\phi(z) = 1-\phi_1(z)-...-\phi_pz^p,\Phi(z) = 1-\Phi_1(z)-...-\Phi_pz^p $$
+$$\theta(z) = 1+\theta_1z+...+\theta_qz^q, \Theta(z) = 1+\Theta_1z+...+\Theta_qz^q $$
+Auto-ARIMA(1,0,1) where $$\phi(z) = 1-0.7300z$$
+$$\theta(z) = 1-0.9256z$$
+
+
+
 
 ### Minimum AIC and BIC
 ```{r min AIC BIC, cache=TRUE}
@@ -811,11 +821,17 @@ banana_bic_arima$`1` %>%
   summary() %>% 
   pander()
 ```
+$$\phi(B)\Phi(B^s)Y_t= \theta(B)\Theta(B^s)Z_t $$ where $$\phi(z) = 1-\phi_1(z)-...-\phi_pz^p,\Phi(z) = 1-\Phi_1(z)-...-\Phi_pz^p $$
+$$\theta(z) = 1+\theta_1z+...+\theta_qz^q, \Theta(z) = 1+\Theta_1z+...+\Theta_qz^q $$
+AIC (1,0,1)
+where $$\phi(z) = 1-0.7573z$$ $$\theta(z) = 1-0.9568z $$
 
+BIC (0,1,0)(0,1,1)
+where $$\phi(z) = 1-0.7573z$$ $$\theta(z) = 1-0.9568z$$
 
 # Forecasting Banana Price
 ## Auto-ARIMA
-```{r AA Forecast Log Return}
+```{r AA Forecast Log Return, fig.height=3, fid.width=7}
 banana_autoarima_forecast <- 
   banana_log_ret_autoarima_01 %>% 
   forecast(num_periods_ahead) 
@@ -840,7 +856,7 @@ banana_autoarima_forecast %>%
   kable(caption = "Auto-ARIMA Forecasted Log Return")
 ```
 
-```{r AA Log Return TS}
+```{r AA Log Return TS, fig.height=3, fig.width=7}
 banana_forecast_logreturn <- 
   banana_price %>% 
   select(
@@ -885,13 +901,13 @@ banana_autoarima_logreturn_plot <-
   theme(axis.title.y = element_blank())
 banana_autoarima_logreturn_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Log Return"
+    title = "Figure 15: Forecasted Banana Log Return"
     ,y = "Log Return"
   ) +
   theme(legend.position = "bottom")
 ```
 
-```{r AA Forecast Price}
+```{r AA Forecast Price, fig.height=3, fig.width=7}
 banana_forecast_price <- 
   banana_price %>% 
   select(
@@ -934,7 +950,7 @@ banana_forecast_price %>%
   kable(caption = "Auto-ARIMA Forecasted Price")
 ```
 
-```{r AA Price TS}
+```{r AA Price TS, fig.height=3, fig.width=7}
 banana_autoarima_price_plot <- 
   banana_forecast_price %>% 
   mutate(Model = "Based on the Auto-ARIMA Model for Log Returns") %>% 
@@ -959,7 +975,7 @@ banana_autoarima_price_plot <-
   theme(axis.title.y = element_blank())
 banana_autoarima_price_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Price"
+    title = "Figure 16: Forecasted Banana Price"
     ,y = "Price (USD/Metric Ton)"
   ) +
   theme(legend.position = "bottom")
@@ -974,7 +990,13 @@ banana_log_ret_autoarima_01 %>%
 
 
 ## Minimum AIC
-```{r AIC Forecast Log Return}
+
+From the lowest AIC model, the RMSE of the model is 0.129. The RSME is the lowest of the 3 models, with the Auto-ARIMAs RSME of 0.130 being almost identical. Looking at the forecasted banana log return model, the expected forecast steadies around zero. In addition, over the past 10 years, the variance of the log return model is decreasing and approaching zero.
+
+From the minimum AIC log returns model with respect to price, it is expected that the price will increase to $1150 USD/Metric Ton by 2020.
+ 
+
+```{r AIC Forecast Log Return, fig.height=3,fig.width=7}
 banana_aic_forecast <- 
   banana_aic_arima$`1` %>% 
   forecast(num_periods_ahead) 
@@ -999,7 +1021,7 @@ banana_aic_forecast %>%
   kable(caption = "Minimum AIC Forecasted Log Return")
 ```
 
-```{r AIC Log Return TS}
+```{r AIC Log Return TS, fig.height=3,fig.width=7}
 banana_aic_logreturn_plot <- 
   banana_forecast_logreturn %>% 
   bind_rows(banana_aic_forecast) %>% 
@@ -1030,13 +1052,13 @@ banana_aic_logreturn_plot <-
   theme(axis.title.y = element_blank())
 banana_aic_logreturn_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Log Return"
+    title = "Figure 17: Forecasted Banana Log Return"
     ,y = "Log Return"
   ) +
   theme(legend.position = "bottom")
 ```
 
-```{r AIC Forecast Price}
+```{r AIC Forecast Price, fig.height=3, fig.width=7}
 banana_forecast_price <- 
   banana_price %>% 
   select(
@@ -1079,7 +1101,7 @@ banana_forecast_price %>%
   kable(caption = "Minimum AIC Forecasted Price")
 ```
 
-```{r AIC Price TS}
+```{r AIC Price TS, fig.height=3, fig.width=7}
 banana_aic_price_plot <- 
   banana_forecast_price %>% 
   mutate(Model = "Based on the Minimum AIC Model for Log Returns") %>% 
@@ -1104,7 +1126,7 @@ banana_aic_price_plot <-
   theme(axis.title.y = element_blank())
 banana_aic_price_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Price"
+    title = "Figure 18: Forecasted Banana Price"
     ,y = "Price (USD/Metric Ton)"
   ) +
   theme(legend.position = "bottom")
@@ -1119,6 +1141,9 @@ banana_aic_arima$`1` %>%
 
 
 ## Minimum BIC
+
+From the lowest BIC model the RMSE of the model is 0.201, the largest RMSE of the models. The forecasted banana log returns suggests that the expected log return to be approximately 0, since the past 10 years have been close to 0 as well. Looking at the minimum BIC models plot with respect to price, it can be seen that the expected price is increasing slightly. However, the 95% confidence interval, the range of the interval is significantly larger than the other models, with the upper bound of the minimum BIC model being approximately 16000 which suggests that this may not be the best model to forecast. 
+
 ```{r BIC Forecast Log Return}
 banana_bic_forecast <- 
   banana_bic_arima$`2` %>% 
@@ -1144,7 +1169,7 @@ banana_bic_forecast %>%
   kable(caption = "Minimum BIC Forecasted Log Return")
 ```
 
-```{r BIC Log Return TS}
+```{r BIC Log Return TS, fig.height=3, fig.width=7}
 banana_bic_logreturn_plot <-
   banana_forecast_logreturn %>% 
   bind_rows(banana_bic_forecast) %>% 
@@ -1175,7 +1200,7 @@ banana_bic_logreturn_plot <-
   theme(axis.title.y = element_blank())
 banana_bic_logreturn_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Log Return"
+    title = "Figure 19: Forecasted Banana Log Return"
     ,y = "Log Return"
   ) +
   theme(legend.position = "bottom")
@@ -1224,7 +1249,7 @@ banana_forecast_price %>%
   kable(caption = "Minimum BIC Forecasted Price")
 ```
 
-```{r BIC Price TS}
+```{r BIC Price TS, fig.height=3, fig.width=7}
 banana_bic_price_plot <-
   banana_forecast_price %>% 
   mutate(Model = "Based on the Minimum BIC Model for Log Returns") %>%  
@@ -1249,7 +1274,7 @@ banana_bic_price_plot <-
   theme(axis.title.y = element_blank())
 banana_bic_price_plot +
   labs(
-    title = "Figure XX: Forecasted Banana Price"
+    title = "Figure 20: Forecasted Banana Price"
     ,y = "Price (USD/Metric Ton)"
   ) +
   theme(legend.position = "bottom")
@@ -1270,7 +1295,7 @@ grid.arrange(
   ,banana_aic_logreturn_plot
   ,banana_bic_logreturn_plot
   ,ncol = 1
-  ,top = "Forecasted Banana Log Return"
+  ,top = "Figure 21: Forecasted Banana Log Return"
   ,left = "Log Return"
 )
 ```
@@ -1281,7 +1306,7 @@ grid.arrange(
   ,banana_aic_price_plot
   ,banana_bic_price_plot
   ,ncol = 1
-  ,top = "Forecasted Banana Price"
+  ,top = "Figure 22: Forecasted Banana Price"
   ,left = "Price (USD/Metric Ton)"
 )
 ```
@@ -1310,15 +1335,171 @@ bind_cols(
   kable(caption = "Comparison of Model Accuracy")
 ```
 
+# Model Diagnostics
+```{r Model Diag, include=FALSE}
+banana_aic_arima_d <- 
+  banana_price$`Log Return` %>% 
+  Arima(
+    order = banana_min_aic[1, 1:3] %>% t()
+    ,seasonal = banana_min_aic[1, 4:6] %>% t()
+    ,include.drift = TRUE
+  )
+banana_aic_arima_s <-
+  banana_price$`Log Return` %>% 
+  Arima(
+    order = banana_min_aic[1, 1:3] %>% t
+    ,seasonal = banana_min_aic[1, 4:6] %>% t() %>% c(3)
+  )
+```
+
+## White Noise
+```{r White Noise}
+tsdiag(banana_aic_arima$`1`)
+tsdisplay(residuals(banana_aic_arima$`1`), lag.max=23, main='Figure 23: ARIMA(1,0,1) Model Residuals')
+```
+
+Figure 23: ACF show slight jumps spikes at certain lags, but not enough to be significant. In addition, the Ljung-Box statistics are all significantly greater than 0.05, which indicates that the Residuals are independently distributed.
+
+## Normality of Residuals
+
+```{r}
+std.res1<-residuals(banana_aic_arima$`1`)/sqrt(banana_aic_arima$`1`$sigma2)
+par(mfrow=c(2,2))
+qqnorm(residuals(banana_aic_arima$`1`))
+qqline(residuals(banana_aic_arima$`1`), col = 2,lwd=2,lty=2)
+hist(std.res1,main="Figure 24: Standardized Residual")
+hist(residuals(banana_aic_arima$`1`),main="Residual")
+jarque.bera.test(residuals(banana_aic_arima$`1`)) 
+```
+
+From the Figure 24, the histograms are relatively symmetric at 0, with a mean of 0, this resembles white noise. In addition, the Jarque Bera test statistic is less than 0.05, thus indicating the the residuals are not normally distributed
+
+## Constant Variance
+```{r}
+plot(residuals(banana_aic_arima$`1`)[1:240], residuals(banana_aic_arima$`1`)[2:241], pch=20,main="Figure 25: Scatterplot of Residual with Lag 1") 
+abline(h=0,lty=2)
+```
+
+In Figure 25, the points are randomly distributed around the 0 line, indicating that variances of residuals are random.
+
+## Drift
+
+```{r}
+dataframe_res1<-data.frame(residuals(banana_aic_arima$`1`))
+dataframe_dat1<-data.frame(banana_price$`Log Return`)
+res<-cbind(dataframe_res1,dataframe_dat1)
+```
+
+```{r}
+plot(res$banana_price..Log.Return.,res$residuals.banana_aic_arima.,main="Figure 26: Residual vs Order Data")
+abline(h=0,lty=2)
+```
+
+From Figure 26, the residuals are not randomly scattered, thus indicating signs of drift.
+
+## Homoscedasticity 
+```{r}
+banana_price$`Log Return` %>% 
+  arima(
+    order = banana_min_aic[1, 1:3] %>% t()
+    ,seasonal = banana_min_aic[1, 4:6] %>% t()
+  ) %>% 
+  arch.test(output = FALSE)
+```
+
+The p-values indicate that the residuals of a ARIMA model is heteroscedastic.
+
+
+# Model with Drift Diagnostics
+## White Noise on Model with Drift
+
+```{r}
+tsdiag(banana_aic_arima_d)
+tsdisplay(residuals(banana_aic_arima_d), lag.max=241, main='Figure 27: ARIMA(1,1,1)with drift Model Residuals')
+```
+
+From Figure 27 the autocorrelation function there are some small jumps spikes at certain lags, however they are not enough to be significant. The Ljung-Box statistics are all significantly greater than 0.05, indicating that the residuals are independently distributed.
+
+## Normality of Residuals
+
+```{r}
+std.res2<-residuals(banana_aic_arima_d)/sqrt(banana_aic_arima_d$sigma2)
+```
+
+```{r}
+par(mfrow=c(2,2))
+qqnorm(residuals(banana_aic_arima_d))
+qqline(residuals(banana_aic_arima_d), col = 2,lwd=2,lty=2)
+hist(std.res2,main="Figure 28: Standardized Residual")
+hist(residuals(banana_aic_arima_d),main="Residual")
+```
+
+From Figure 28, the histograms are relatively symmetric at 0, with mean = 0, resembling white noise.
+
+## Homoscedasticity
+
+```{r}
+jarque.bera.test(residuals(banana_aic_arima_d)) 
+```
+
+In addition, the jarque bera test statistic is less than 0.05, thus indicating the the residuals are not normally distributed.
+
+## Constant Variance
+
+```{r}
+plot(residuals(banana_aic_arima_d)[1:240], residuals(banana_aic_arima_d)[2:241], pch=20, main="Figure 29: Scatterplot of Residual with Lag 1") 
+abline(h=0,lty=2)
+```
+
+From Figure 29, the scatter plot shows random spread around 0 line, indicating variances of residuals are random.
+
+## Drift
+
+```{r}
+dataframe_res2<-data.frame(residuals(banana_aic_arima_d))
+dataframe_dat2<-data.frame(banana_price$`Log Return`)
+res<-cbind(dataframe_res2,dataframe_dat2)
+plot(res$banana_price..Log.Return.,res$residuals.banana_aic_arima_d.,main="Figure 30: Residual vs Order Data")
+abline(h=0,lty=2)
+```
+
+
 # Results
 
+Based on the results of the model selection the minimum AIC model was chosen as the best model to forecast the price of Bananas. 
+$$
+  \phi(B)\Phi(B^s)Y_t= \theta(B)\Theta(B^s)Z_t
+$$ 
+where
+$$
+  \phi(z) = 1-\phi_1(z)-...-\phi_pz^p,\Phi(z) = 1-\Phi_1(z)-...-\Phi_pz^p
+$$
+AIC (1,0,1)
+where
+$$
+  \phi(z) = 1-0.7573z
+$$ 
+$$
+  \theta(z) = 1-0.9568z
+$$
+Using this model to forecast the price of bananas to April 1st 2018 the expected price of bananas is \$1071 USD per Metric Ton and the actual price of bananas was \$1160 USD per Metric Ton. There is some error in the forecasted value, this error is likely due to predicting the price based on data set that ended a year and half ago. 
+
+Using the minimum AIC model the price of bananas was also forecasted to the year 2020, where the expected price will increase to $1150 USD/Metric Ton. This price is lower than the known price from April 1st 2018 and therefore a more accurate prediction for the price of bananas could be made more accurate by shortening the time between the end of the data set and the forecast date. 
+
+
 # Conclusions
+
+The analysis of the price of bananas shows that the price of bananas has been increasing since 1997, and in 2017 the price of bananas had doubled. The price of bananas was affected by the seasons and is usually highest during the northern hemispheres spring and the lowest during the northern hemispheres winter. The banana price data had seasonal components and trend and therefore transformations, model selection and diagnostics where used to determine the best model for forecasting the price of bananas. 
+
+The recommended model for forecasting the price of bananas is the minimum AIC model. The minimum AIC model suggests that the price will continue to increase, which follows the trend over the last 20 years. 
+
+In conclusion the forecasted price for bananas for April 1st 2018 is expected to be \$1071 USD per Metric Ton and the log return is expected to be 0.003377 and the expected price will increase to $1150 USD/Metric Ton by 2020. 
 
 # Appendix
 
 # References
-[1] https://fred.stlouisfed.org/series/PBANSOPUSDM
+[1] Federal Reserve Bank of St.Louis (FRED). (2017, July 12). Global price of Bananas. Retrieved April 09, 2018, from https://fred.stlouisfed.org/series/PBANSOPUSDM
 
-[2] http://www.britannica.com/plant/banana-plant
+[2] Britannica, T. E. (2018, March 15). Banana. Retrieved April 09, 2018, from http://www.britannica.com/plant/banana-plant
 
-[3] bananalink.org.uk
+[3] Banana Link. (n.d.). Retrieved April 09, 2018, from http://www.bananalink.org.uk/

@@ -69,7 +69,7 @@ snow_long %>%
   ggplot(
     aes(
       x = Gauge
-      ,y = log(Gain)
+      ,y = Gain
       ,colour = Density
     )
   ) +
@@ -129,7 +129,6 @@ Talk about how we split the data into training data (Gauges 1-3), and validation
 
 # Calibration
 ## Classic Calibration Method
-For the classic calibration method, we regress our measurement ($G:=$ Gain) as a function of the known variable ($D:=$ Density).
 ```{r LM}
 snow_lm <-
   snow_long_train %>% 
@@ -141,27 +140,8 @@ snow_lm <-
 snow_lm %>% 
   summary() %>% 
   pander()
+autoplot(snow_lm)
 ```
-
-From this we take our linear regression model, and invert it, solving for the known predictor variable $D$. This gives us:
-
-$$
-  \hat{D_{i}} = 
-  -\frac{\ln(G_{i}) - 6.0032 - \epsilon_{i}}{4.6301} =
-  1.2965(1+\epsilon_{i}) - 0.2160\ln(G_{i}),
-  \epsilon_{i} \stackrel{iid}{\sim} \mathcal{N}(0,\sigma^{2})
-$$
-
-From this, we can come up with both the point estimates for $D$, and a prediction interval, using:
-$$
-  \se\left( \hat{D_{i}} \right) =
-  \frac{\sqrt{MSE}}{\hat{\beta_{1}}}\sqrt{1 + \frac{1}{n} + \frac{\left( D_{i}-\bar{D} \right)^{2}}{S_{DD}}},
-  MSE = 0.0028,
-  \bar{D} = 0.3311\dots,
-  S_{DD} = 0.2293
-$$
-
-As well as assuming an underlying Student's t-distribution, with $df=n-p=n-2=27-2=25$.
 
 ```{r Classic Calibration Est}
 classic_calibration <- function(x, object){
@@ -175,20 +155,19 @@ snow_summ_valid_cc <-
   mutate(
     `Est Density` = classic_calibration(x = `Mean Gain`, object = snow_lm)
     ,`Prediction Std. Error` = 
+      qt(1-alpha/2, snow_lm$df.residual, lower.tail = TRUE) * 
       sqrt(
         (summary(snow_lm)$sigma/snow_lm$coefficients[[2]])^2 *
         ( 1 + 
             1/nrow(snow_long_train) + 
             (`Est Density` - mean(snow_long_train$Density))^2/sd(snow_long_train$Density) )
       )
-    ,`Prediction LB` = `Est Density` - qt(1-alpha/2, snow_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
-    ,`Prediction UB` = `Est Density` + qt(1-alpha/2, snow_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
+    ,`Prediction LB` = `Est Density` - `Prediction Std. Error`
+    ,`Prediction UB` = `Est Density` + `Prediction Std. Error`
   )
 snow_summ_valid_cc %>% 
   kable()
 ```
-
-From this, we can plot the results, with the Estimated Density on the y-axis, and the Mean Gain for a given Density on the x-axis. The grey band represents the 95\% Prediction Interval for $D$.
 
 ```{r CC Dens vs Gain}
 snow_summ_valid_cc %>% 
@@ -218,12 +197,6 @@ snow_summ_valid_cc %>%
   )
 ```
 
-Parker et al. (2010), provides a method for finding a finding the bias in the estimation of $\hat{D_{i}}$:
-$$
-  \operatorname{bias}\left( \hat{D_{i}} \right) =
-  \frac{(D_{i} - \bar{D})MSE}{\hat{\beta_{1}}^{2}S_{DD}}
-$$
-
 ```{r CC Unbias}
 snow_summ_unbias_cc <- 
   snow_summ_valid_cc %>% 
@@ -232,41 +205,21 @@ snow_summ_unbias_cc <-
       (Density - mean(snow_long_train$Density)) * summary(snow_lm)$sigma^2 /
       (snow_lm$coefficients[[2]]^2 * sd(snow_long_train$Density))
     ,`Unbiased Est Density` = `Est Density` - Bias
+    ,Diff = Density - `Unbiased Est Density`
   ) %>% 
-  select(Density, `Est Density`, Bias, `Unbiased Est Density`)
+  select(Density, `Est Density`, Bias, `Unbiased Est Density`, Diff)
 snow_summ_unbias_cc %>% 
-  kable(caption = "Unbiasing the Estimated Density for Classic Calibration")
-
-snow_summ_unbias_cc %>% 
-  ggplot(
-    aes(
-      x = Density
-      ,y = Bias
-    )
-  ) +
-  geom_line() +
-  labs(
-    title = "Rate of Change of Bias"
-    ,x = expression(paste("Density (g/cm"^3,")"))
-    ,y = expression(paste("Estimated Bias (g/cm"^3,")"))
-  )
+  kable(caption = "Unbiasing the Estimated Density")
 ```
+
+$$
+  D_{pred} = 
+  -\frac{\ln(G) - 6.0032}{4.6301} =
+  1.2965 - 0.2160\ln(G)
+$$
 
 
 ## Inverse Regression
-The other methodology looked at was using a inverse regression technique, by using $D$ as the dependent variable, and $G$ as the independent variable. This should give us a slightly different result than the coefficients calculated under the classical calibration method, as regression equations don't invert exactly unless the correlation between the two variables is $\pm 1$. Because our correlation (`r cor(snow_long_train$Density, snow_long_train$Gain)`) is close to $-1$, the coefficients will be very close. For this we use the model:
-
-$$
-  \hat{D_{i}} =
-  \hat{\gamma_{0}} + \hat{\gamma_{1}}\left( \ln(G_{i}) - \overline{\ln(G_{i})} \right) + \epsilon_{i} =
-  0.3311 - 02155\left( \ln(G_{i}) - 4.4701 \right) + \epsilon_{i},
-  \epsilon_{i} \stackrel{iid}{\sim} \mathcal{N}(0,\sigma^{2})
-$$
-$$
-  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
-  \hat{\gamma_{0}} = \bar{D}
-$$
-
 ```{r Inv LM}
 snow_inv_lm <-
   snow_long_train %>% 
@@ -278,9 +231,19 @@ snow_inv_lm <-
 snow_inv_lm %>% 
   summary() %>% 
   pander()
+autoplot(snow_inv_lm)
 ```
 
-As we can see from the regression output, $\hat{\gamma_{0}} = \bar{D}$, which is what we want. We then estimated $\hat{D_{i}}$, and the prediction interval estimate:
+$$
+  D =
+  \gamma_{0} + \gamma_{1}\left( \ln(G) - \overline{\ln(G)} \right)
+  0.3311 - 02155\left( \ln(G) - 4.4701 \right)
+$$
+$$
+  \overline{\ln(G)} = \sum_{i=1}^{n}\frac{\ln{G_{i}}}{n},
+  \gamma_{0} = \bar{D}
+$$
+
 
 ```{r Inverse Reg Est}
 inverse_regression <- function(x, object){
@@ -299,20 +262,19 @@ snow_summ_valid_ir <-
   mutate(
     `Est Density` = inverse_regression(x = `Mean Gain`, object = snow_inv_lm)
     ,`Prediction Std. Error` =
+      qt(1-alpha/2, snow_inv_lm$df.residual, lower.tail = TRUE) *
       sqrt(
         (summary(snow_inv_lm)$sigma)^2 *
           ( 1 +
               1/nrow(snow_long_train) +
               (log(`Mean Gain`) - mean(log(snow_long_train$Gain)))^2/sd(log(snow_long_train$Gain)) )
       )
-    ,`Prediction LB` = `Est Density` - qt(1-alpha/2, snow_inv_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
-    ,`Prediction UB` = `Est Density` + qt(1-alpha/2, snow_inv_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
+    ,`Prediction LB` = `Est Density` - `Prediction Std. Error`
+    ,`Prediction UB` = `Est Density` + `Prediction Std. Error`
   )
 snow_summ_valid_ir %>% 
   kable()
 ```
-
-As well as recreating the plot used in the classical calibration method. Note that the plot looks very similar, with a marginally large standard error term.
 
 ```{r IR Dens vs Gain}
 snow_summ_valid_ir %>% 
@@ -342,44 +304,22 @@ snow_summ_valid_ir %>%
   )
 ```
 
-Parker et al. (2010), provides a means of unbiasing $\hat{D_{i}}$ for inverse regression too:
-
-$$
-  \operatorname{bias}\left( \hat{D_{i}} \right) =
-  \frac{\bar{D} - D_{i}}{1 + \frac{\hat{\beta_{1}}^{2}S_{DD}}{(n-1)MSE}}
-$$
-
-This is then plotted against $D$, to see the rate of change.
-
 ```{r IR Unbias}
 snow_summ_unbias_ir <- 
   snow_summ_valid_ir %>% 
   mutate(
     Bias = 
-      (mean(snow_long_train$Density) - Density) /
+      (Density - mean(snow_long_train$Density)) * snow_inv_lm$coefficients[[2]] /
       (1 + 
          (snow_inv_lm$coefficients[[2]]^2*sd(snow_long_train$Density))/
          ((nrow(snow_long_train) - 1)*summary(snow_inv_lm)$sigma^2)
       )
     ,`Unbiased Est Density` = `Est Density` - Bias
+    ,Diff = Density - `Unbiased Est Density`
   ) %>% 
-  select(Density, `Est Density`, Bias, `Unbiased Est Density`)
+  select(Density, `Est Density`, Bias, `Unbiased Est Density`, Diff)
 snow_summ_unbias_ir %>% 
-  kable(caption = "Unbiasing the Estimated Density for Inverse Regression")
-
-snow_summ_unbias_ir %>% 
-  ggplot(
-    aes(
-      x = Density
-      ,y = Bias
-    )
-  ) +
-  geom_line() +
-  labs(
-    title = "Rate of Change of Bias"
-    ,x = expression(paste("Density (g/cm"^3,")"))
-    ,y = expression(paste("Estimated Bias (g/cm"^3,")"))
-  )
+  kable(caption = "Unbiasing the Estimated Density")
 ```
 
 
@@ -400,7 +340,7 @@ snow_summ_unbias_cc %>%
       )
     ,by = "Density"
   ) %>% 
-  kable(caption = "Comparison of Bias")
+  kable()
 
 snow_summ_valid_cc %>% 
   select(
@@ -419,14 +359,10 @@ snow_summ_valid_cc %>%
       )
     ,by = c("Density" = "Density", "Mean Gain" = "Mean Gain")
   ) %>% 
-  kable(caption = "Comparison of Standard Error")
+  kable()
 ```
 
-To compare the two methods, we looked at the size of their Bias, and the size of the Standard Errors. From the two tables above, one can see that the Classic Calibration method outperformed the Inverse Regression by having both a smaller estimated bias, and a smaller estimated standard error based on the same training and validation samples.
-
 ## Measurement Error
-If we were to assume that the given densities for the polyethylene blocks contained small amounts of measurement error, this change the size of our interval estimates.
-
 Let:
 $$
   \hat{D_{i}} =
@@ -447,5 +383,3 @@ $$
   \epsilon^{\star}_{G,i} \sim
   \mathcal{N}\left( 0, \hat{\beta_{1}}^{2}\sigma_{D}^{2}+\sigma_{G}^{2}+2\hat{\beta_{1}}\Cov(D,G) \right)
 $$
-
-Now hopefully the covariance term is equal to 0, otherwise additional issues would arise in the calibration. While this won't affect the coefficient estimation done in the regressions, it would affect the size of the interval estimates, by increasing them to reflect the greater uncertainty in the quality of measurements.
