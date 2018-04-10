@@ -80,8 +80,6 @@ snow_wide %>%
 
 To begin the data analysis, the gain versus the density were plotted and the plot is shown in Figure 01. In Figure 01, it can be seen that measurements of gain remain relatively consistent for the 10 measurements taken. Also, in Figure 01, there is a very obvious trend within the measurements, that is as the gain decreases, the density of the polyethylene blocks increase. This is a good indication as to where to start when calibrating a snow gauge.
 
-Figure 02, shows a negative linear relationship between the log of gain versus the density, as the density increases the gain decreases. In this case a logistic model is appropriate because as density increases, the space between the molecules decreases exponentially and therefore as density increases, it is much more likely that a gamma ray will be deflected or absorbed.  
-
 ```{r Measured Gain by Gauge}
 snow_long %>% 
   ggplot(
@@ -112,7 +110,10 @@ snow_long %>%
   )
 ```
 
-A subset of the data was collected and used to train the snow gauge. The training set consisted of the first three measurements. The second subset of data consisted of the fourth to tenth measurements and was used to validate the data. In this case a training set is useful to validate our model because it will be testing the fit of our model using cross-validation and the data that has already been collected. Since we do not know the exact method of calibrating a snow gauge using the existing data and testing the model is important for accuracy.
+
+
+## Training vs. Validation Data
+Figure 02, shows a negative linear relationship between the log of gain versus the density, as the density increases the gain decreases. In this case a logistic model is appropriate because as density increases, the space between the molecules decreases exponentially and therefore as density increases, it is much more likely that a gamma ray will be deflected or absorbed.
 
 ```{r Training Data}
 snow_long_train <- 
@@ -138,12 +139,8 @@ snow_long_train %>%
   )
 ```
 
-talk about how a log model is appropriate
+A subset of the data was collected and used to train the snow gauge. The training set consisted of the first three measurements. The second subset of data consisted of the fourth to tenth measurements and was used to validate the data. In this case a training set is useful to validate our model because it will be testing the fit of our model using cross-validation and the data that has already been collected. Since we do not know the exact method of calibrating a snow gauge using the existing data and testing the model is important for accuracy.
 
-
-## Training vs. Validation Data
-
-Talk about how we split the data into training data (Gauges 1-3), and validation data (gauges 4-10). 
 
 # Calibration
 ## Classic Calibration Method
@@ -203,7 +200,7 @@ snow_summ_valid_cc <-
     ,`Prediction UB` = `Est Density` + qt(1-alpha/2, snow_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
   )
 snow_summ_valid_cc %>% 
-  kable()
+  kable(caption = "Prediction Interval")
 ```
 
 From this, we can plot the results, with the Estimated Density on the y-axis, and the Mean Gain for a given Density on the x-axis. The grey band represents the 95\% Prediction Interval for $D$.
@@ -332,7 +329,7 @@ snow_summ_valid_ir <-
     ,`Prediction UB` = `Est Density` + qt(1-alpha/2, snow_inv_lm$df.residual, lower.tail = TRUE) * `Prediction Std. Error`
   )
 snow_summ_valid_ir %>% 
-  kable()
+  kable(caption = "Prediction Interval")
 ```
 
 As well as recreating the plot used in the classical calibration method. Note that the plot looks very similar, with a marginally large standard error term.
@@ -486,7 +483,7 @@ Materials Required: Ten different polyethylene blocks with the following densiti
   
   + If the gain falls within the prediction bound, mark that the gain was accurately read. Repeat the steps with the next block of known densities until all blocks are reading accurately.
 
-
+See Figure 03, and Table 04 for examples of this.
 
 # Conclusion
 There were two methods, the Classical Calibration method and the Inverse Regression method used for measuring gain. When comparing the standard errors and the biases the Classical Calibration method outperformed the Inverse Regression method and therefore it is recommended that the Classical Calibration method be used to calibrate the snow gauges.
