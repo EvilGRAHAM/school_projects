@@ -1,7 +1,7 @@
 ---
 title: "Snow"
 author: "Kaisa Roggeveen, Scott Graham"
-date: "April 6th, 2018"
+date: "April 10th, 2018"
 header-includes:
   - \newcommand{\Prob}{\operatorname{P}}
   - \newcommand{\E}{\operatorname{E}}
@@ -58,11 +58,29 @@ alpha <- 0.05
 ```
 
 # Introduction
+The intent of this paper is to determine the procedure for calibrating snow gauges. Snow gauges are used to measure the depth and density of a snow pack and are used to help monitor water supply in Northern California. Recently, the state of California has been in a drought [1], and having accurate measurements of their water supply is very important. The information from the snow gauges is critical for helping the state prepare for the dry season and therefore it is critical that the snow gauges are taking accurate measurements. 
+
+The snow gauges in the Sierra Nevada mountains are fixed at one location and able to measure the density of the snow pack without making changes to the snow pack. The snow gauge consists of two vertical poles that are about 70cm apart, where one pole has a gamma ray emitter and the other pole has a detector. Snow with a higher density will be detected less, since the energy waves are scatter by the snow particles and snow with a lower density will let more gamma rays pass through and be detected. 
+
+In order to calibrate the snow gauge, polyethylene blocks are used to mimic the snow at different densities. The same model applies to the polyethylene blocks, blocks with higher density will let less gamma rays reach the detector since the probability of the gamma ray reaching the block decreases and blocks with lower density will let more gamma rays through with a greater probability of reaching the block. 
+
+The probability of the gamma ray being detected follows this model where:
+$$P^m$$ 
+where $p$ is the probability the gamma ray is not absorbed nor deflected and $m$ is the number of molecules between the gamma ray emitter and the detector. Another expression of the model is: 
+$$e^{m\ln(p)} = e^{bx}$$
+where $x$ is the density and $b$ is a constant.
+
 ## Data
+Data sets was provided by the USDA Forest Service's and consists of ten measurements from nine different density of polyethylene block's gain, which is an amplified count of the detected photons, the densities were measured in g/cm^$3$. The gain for the polyethylene blocks was measured for blocks with densities between 0.001 g/cm^$3$ and 0.686 g/cm^$3$. The density of a snow pack usually falls between 0.1 g/cm$^3$ and 0.6 g/cm^$3$
+
 ```{r Wide Data}
 snow_wide %>% 
-  kable(caption = "Wide Data")
+  kable(caption = "Gauge Data")
 ```
+
+To begin the data analysis, the gain versus the density were plotted and the plot is shown in Figure 01. In Figure 01, it can be seen that measurements of gain remain relatively consistent for the 10 measurements taken. Also, in Figure 01, there is a very obvious trend within the measurements, that is as the gain decreases, the density of the polyethylene blocks increase. This is a good indication as to where to start when calibrating a snow gauge.
+
+Figure 02, shows a negative linear relationship between the log of gain versus the density, as the density increases the gain decreases. In this case a logistic model is appropriate because as density increases, the space between the molecules decreases exponentially and therefore as density increases, it is much more likely that a gamma ray will be deflected or absorbed.  
 
 ```{r Measured Gain by Gauge}
 snow_long %>% 
@@ -94,7 +112,7 @@ snow_long %>%
   )
 ```
 
-Talk about how the gauges are consistent
+A subset of the data was collected and used to train the snow gauge. The training set consisted of the first three measurements. The second subset of data consisted of the fourth to tenth measurements and was used to validate the data. In this case a training set is useful to validate our model because it will be testing the fit of our model using cross-validation and the data that has already been collected. Since we do not know the exact method of calibrating a snow gauge using the existing data and testing the model is important for accuracy.
 
 ```{r Training Data}
 snow_long_train <- 
@@ -115,7 +133,7 @@ snow_long_train %>%
   geom_smooth(method = "lm") +
   geom_point() +
   labs(
-    title = "Log Gain vs. Density with Training Data"
+    title = "Figure 02: Log Gain vs. Density with Training Data"
     ,x = expression(paste("Density (g/cm"^3,")"))
   )
 ```
@@ -212,7 +230,7 @@ snow_summ_valid_cc %>%
   ) +
   geom_point() +
   labs(
-    title = "Estimated Density vs. Gain"
+    title = "Figure 03: Estimated Density vs. Gain"
     ,subtitle = "With Prediction Interval and Curve"
     ,y = expression(paste("Estimated Density (g/cm"^3,")"))
   )
@@ -246,7 +264,7 @@ snow_summ_unbias_cc %>%
   ) +
   geom_line() +
   labs(
-    title = "Rate of Change of Bias"
+    title = "Figure 04: Rate of Change of Bias"
     ,x = expression(paste("Density (g/cm"^3,")"))
     ,y = expression(paste("Estimated Bias (g/cm"^3,")"))
   )
@@ -281,6 +299,11 @@ snow_inv_lm %>%
 ```
 
 As we can see from the regression output, $\hat{\gamma_{0}} = \bar{D}$, which is what we want. We then estimated $\hat{D_{i}}$, and the prediction interval estimate:
+
+$$
+  \se\left( \hat{D_{i}} \right) =
+  \sqrt{MSE}\sqrt{1 + \frac{1}{n} + \frac{\left( \ln(G_{i})-\overline{\ln(G)} \right)^{2}}{S_{GG}}}
+$$
 
 ```{r Inverse Reg Est}
 inverse_regression <- function(x, object){
@@ -336,7 +359,7 @@ snow_summ_valid_ir %>%
   ) +
   geom_point() +
   labs(
-    title = "Estimated Density vs. Gain"
+    title = "Figure 05: Estimated Density vs. Gain"
     ,subtitle = "With Prediction Interval and Curve"
     ,y = expression(paste("Estimated Density (g/cm"^3,")"))
   )
@@ -376,7 +399,7 @@ snow_summ_unbias_ir %>%
   ) +
   geom_line() +
   labs(
-    title = "Rate of Change of Bias"
+    title = "Figure 06: Rate of Change of Bias"
     ,x = expression(paste("Density (g/cm"^3,")"))
     ,y = expression(paste("Estimated Bias (g/cm"^3,")"))
   )
@@ -449,3 +472,21 @@ $$
 $$
 
 Now hopefully the covariance term is equal to 0, otherwise additional issues would arise in the calibration. While this won't affect the coefficient estimation done in the regressions, it would affect the size of the interval estimates, by increasing them to reflect the greater uncertainty in the quality of measurements.
+
+# Instructions for Calibration
+Materials Required: Ten different polyethylene blocks with the following densities in g/cm^$3$; 0.001, 0.080, 0.148, 0.223, 0.318, 0.412, 0.508, 0.604 and 0.686.
+
+1. Place a polyethylene block between the snow gauge and measure take ten measurements of the gain. 
+
+2. Calculate the mean gain for the polyethylene block.
+
+3. Using the data set provided, determine if the mean gain falls within the lower and upper bounds for the known density. 
+  
+  + If the gain does not fall within the bounds for the known density, then adjust the gamma ray emission and repeat until the gain falls within the prediction bound.
+  
+  + If the gain falls within the prediction bound, mark that the gain was accurately read. Repeat the steps with the next block of known densities until all blocks are reading accurately.
+
+
+
+# Conclusion
+There were two methods, the Classical Calibration method and the Inverse Regression method used for measuring gain. When comparing the standard errors and the biases the Classical Calibration method outperformed the Inverse Regression method and therefore it is recommended that the Classical Calibration method be used to calibrate the snow gauges.
